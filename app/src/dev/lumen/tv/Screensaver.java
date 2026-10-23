@@ -68,7 +68,13 @@ public final class Screensaver extends DreamService {
         }
 
         @Override public boolean onKeyDown(int keyCode, android.view.KeyEvent event) {
-            ((Screensaver) getContext()).finish();
+            return true;
+        }
+
+        @Override public boolean onKeyUp(int keyCode, android.view.KeyEvent event) {
+            // Consume the complete press before finishing; otherwise Home can receive the
+            // trailing Back event and immediately launch the screensaver again.
+            post(() -> ((Screensaver) getContext()).finish());
             return true;
         }
 
