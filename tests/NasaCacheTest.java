@@ -33,12 +33,26 @@ public final class NasaCacheTest {
                 return stores.get(name);
             }
         };
+        java.lang.reflect.Method directory = Nasa.class.getDeclaredMethod("directory", Context.class);
+        directory.setAccessible(true);
+        File dir = (File) directory.invoke(null, isolated);
+        java.lang.reflect.Method prefs = Nasa.class.getDeclaredMethod("prefs", Context.class);
+        prefs.setAccessible(true);
+        SharedPreferences nasaPrefs = (SharedPreferences) prefs.invoke(null, isolated);
         if (args.length > 1 && args[1].equals("online")) {
-            Nasa.photo(isolated, "online", 320, 180, 1, null);
+            if (args.length > 3) {
+                java.lang.reflect.Method query = Nasa.class.getDeclaredMethod("searchQuery", Context.class, String.class, String.class, java.util.Random.class);
+                query.setAccessible(true);
+                Object chosen = query.invoke(null, isolated, args[3], null, new java.util.Random());
+                check(chosen != null, "a scenic result for " + args[3]);
+                java.lang.reflect.Method json = chosen.getClass().getDeclaredMethod("json"); json.setAccessible(true);
+                nasaPrefs.edit().putString("online.entry", json.invoke(chosen).toString())
+                        .putLong("online.at", System.currentTimeMillis()).apply();
+            } else Nasa.photo(isolated, "online", 320, 180, 1, null);
             Field worker = Nasa.class.getDeclaredField("warming"); worker.setAccessible(true);
             long deadline = System.currentTimeMillis() + 60000;
             while (worker.getBoolean(null) && System.currentTimeMillis() < deadline) Thread.sleep(100);
-            File[] files = new File(cache, "nasa-live-v1").listFiles();
+            File[] files = dir.listFiles((folder, name) -> name.endsWith(".jpg"));
             check(!worker.getBoolean(null) && files != null && files.length == 1, "one live NASA result downloaded");
             File f = files[0];
             long bytes = f.length();
@@ -46,18 +60,19 @@ public final class NasaCacheTest {
             Nasa.Photo ph = Nasa.photo(isolated, "online", 320, 180, 3600000, null);
             check(ph != null && ph.credit.contains(" · "), "search result decodes with title and credit");
             ph.bitmap.recycle();
-            cleanup(cache);
-            System.out.println("PASS: live NASA search selected and downloaded a result; " + bytes + " bytes on disk");
+            System.out.println("Selected: " + ph.credit + " -> " + f.getAbsolutePath());
+            System.out.println("SOURCE: " + nasaPrefs.getString("online.entry", ""));
+            if (args.length < 3 || !args[2].equals("keep")) cleanup(cache);
+            System.out.println("PASS: live NASA search selected and downloaded a scenic result; " + bytes + " bytes on disk");
             System.exit(0);
         }
         // Prevent all downloads: these tests exercise actual offline decoding and rotation, not a network mock.
         Field warming = Nasa.class.getDeclaredField("warming"); warming.setAccessible(true); warming.setBoolean(null, true);
         check(Nasa.photo(isolated, "empty", 320, 180, 3600000, null) == null, "empty cache falls back");
-        File dir = new File(cache, "nasa-live-v1");
         dir.mkdirs();
         fixture(new File(dir, "sample_001.jpg"), 0xff223355);
         fixture(new File(dir, "sample_002.jpg"), 0xff335522);
-        isolated.getSharedPreferences("nasa", 0).edit().putString("home.entry", entry("sample_001", "Sample image", "NASA")).apply();
+        nasaPrefs.edit().putString("home.entry", entry("sample_001", "Sample image", "NASA")).apply();
         Nasa.Photo first = Nasa.photo(isolated, "home", 320, 180, 3600000, null);
         check(first != null && first.bitmap.getWidth() == 320 && first.bitmap.getHeight() == 180, "screen-sized offline decode");
         check(first.credit.contains("NASA"), "NASA attribution retained");
@@ -66,7 +81,7 @@ public final class NasaCacheTest {
         check(stable.credit.equals(credit), "home does not rotate early"); stable.bitmap.recycle();
         Nasa.Photo next = Nasa.photo(isolated, "home", 320, 180, 0, null);
         check(next.credit.equals(credit), "offline due rotation keeps the last good image"); next.bitmap.recycle();
-        isolated.getSharedPreferences("nasa", 0).edit().putString("bad.entry", entry("sample_003", "Broken sample", "NASA")).apply();
+        nasaPrefs.edit().putString("bad.entry", entry("sample_003", "Broken sample", "NASA")).apply();
         File bad = new File(dir, "sample_003.jpg");
         try (FileOutputStream out = new FileOutputStream(bad)) { out.write(new byte[]{1, 2, 3}); }
         Nasa.Photo recovered = Nasa.photo(isolated, "bad", 320, 180, 0, null);
@@ -74,7 +89,7 @@ public final class NasaCacheTest {
         Bitmap huge = Bitmap.createBitmap(2001, 8, Bitmap.Config.ARGB_8888);
         try (FileOutputStream out = new FileOutputStream(bad)) { huge.compress(Bitmap.CompressFormat.JPEG, 80, out); }
         huge.recycle();
-        isolated.getSharedPreferences("nasa", 0).edit().putString("bounds.entry", entry("sample_003", "Oversize sample", "NASA")).apply();
+        nasaPrefs.edit().putString("bounds.entry", entry("sample_003", "Oversize sample", "NASA")).apply();
         Nasa.Photo safe = Nasa.photo(isolated, "bounds", 320, 180, 0, null);
         check(safe == null && !bad.exists(), "oversized dimensions rejected before decode");
         cleanup(cache);

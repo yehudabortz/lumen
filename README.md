@@ -4,7 +4,11 @@ A calm, clean and minimal home screen for Android TV and Google TV: your apps on
 from those apps, the time and the weather, over a landscape that follows the time of day. No ads, ever: everything on
 screen comes from apps already on your TV.
 
-![Lumen home screen (design mockup)](docs/design/screens/home.jpg)
+![Lumen running in a Google TV emulator with public sample content](docs/design/screens/home.jpg)
+
+The gallery contains native Android captures with public app artwork and sample recommendations, made in a
+clean Google TV emulator. No personal TV data or streaming accounts are used. See the
+[screenshot workflow](tools/screenshots/README.md) to regenerate them.
 
 **Design:** see [`docs/design/DESIGN.md`](docs/design/DESIGN.md) for the layout, the screens, where the
 content comes from and the full list of options, and open [`docs/design/mockup.html`](docs/design/mockup.html) in a

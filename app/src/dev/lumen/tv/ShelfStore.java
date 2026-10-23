@@ -30,6 +30,12 @@ final class ShelfStore {
         float progress;       // 0..1, or 0 when there's nothing to resume
         long engaged;         // last engagement, for ordering
         boolean watchNext;
+        private String stableFocusKey;
+
+        String focusKey() {
+            if (stableFocusKey == null) stableFocusKey = "shelf\n" + pkg + "\n" + title + "\n" + intentUri;
+            return stableFocusKey;
+        }
     }
 
     static final class Shelf {

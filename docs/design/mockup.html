@@ -115,7 +115,7 @@
   .card .meta span { display: block; font-size: 21px; font-weight: 500; color: var(--text-2); text-shadow: 0 2px 12px rgba(0,0,0,.35); }
   .card.focus .meta span { color: var(--text); }
   .card.focus .pic { transform: scale(1.07); box-shadow: 0 26px 44px -14px rgba(0,0,0,.7), 0 8px 16px -6px rgba(0,0,0,.45); }
-  .stage:not(.busy) .card.focus .pic { animation: heartbeat 3400ms infinite; }
+  .stage.heartbeat-armed:not(.busy) .card.focus .pic { animation: heartbeat 3400ms infinite; }
   .card.focus .meta { transform: translateY(8px); }
   .hero { position: absolute; left: 185px; top: 200px; width: 820px; opacity: 0; transform: translateY(16px); transition: opacity 400ms var(--ease), transform 400ms var(--ease); }
   .stage.shelf .hero { opacity: 1; transform: none; }
@@ -146,7 +146,7 @@
   .tile .art::before { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 2;
                box-shadow: inset 0 0 0 1px rgba(255,255,255,.10), inset 0 1.5px 0 rgba(255,255,255,.22); }
   .tile.focus { transform: scale(1.09); z-index: 2; box-shadow: 0 26px 44px -14px rgba(0,0,0,.65), 0 8px 16px -6px rgba(0,0,0,.4); }
-  .stage:not(.busy) .tile.focus:not(.moving) { animation: heartbeat 3400ms infinite; }
+  .stage.heartbeat-armed:not(.busy) .tile.focus:not(.moving) { animation: heartbeat 3400ms infinite; }
   @keyframes heartbeat {
     0%, 6.5%, 21.8%, 26.5%, 44.7%, 100% { scale: 1; }
     14% { scale: 1.004; }
@@ -507,6 +507,7 @@ function render() {
   st.classList.toggle('shelf', s.view === 'shelf');
   st.classList.toggle('reduced', prefs.Motion === 'Reduced');
   st.classList.toggle('busy', !!(s.sheet || s.moving || s.panel));
+  st.classList.toggle('heartbeat-armed', !!s.heartbeatArmed);
   const [w, h, maxVisible] = SIZES[prefs['Tile size']];
   st.style.setProperty('--tile-w', w + 'px'); st.style.setProperty('--tile-h', h + 'px');
   const t = prefs['Follow time of day'] === 'On' ? tod : 'dusk';
@@ -609,7 +610,7 @@ function renderPanel() {
     html += `<div class="opt ${i === s.panel.i ? 'focus' : ''}"><span>${name}</span><span class="v">${sub ? v + ' <span class="arw">›</span>' : '<span class="arw">‹</span>' + v + '<span class="arw">›</span>'}</span></div>`;
     y += 60;
   });
-  $('panelInner').innerHTML = html + '<h3>About</h3><div class="opt" style="color:var(--text-2);font-size:21px">Lumen 0.2 · open source</div>';
+  $('panelInner').innerHTML = html + '<h3>About</h3><div class="opt" style="color:var(--text-2);font-size:21px">Lumen 0.3 · by Yehuda Bortz</div><div style="font-size:21px;line-height:28px;padding:8px 24px;color:var(--text-3);overflow-wrap:break-word">No ads, no tracking: the shelf shows only what your apps publish.</div>';
   $('panelInner').style.transform = `translateY(${-Math.max(0, focusY - 700)}px)`;  // keep the focused row in view
 }
 
@@ -618,7 +619,8 @@ let idleTimer, holdTimer, held = false;
 function wake() { $('hint').classList.remove('idle'); clearTimeout(idleTimer); idleTimer = setTimeout(() => $('hint').classList.add('idle'), 4000); }
 function toast(t) { const el = $('toast'); el.textContent = t; el.classList.add('on'); setTimeout(() => el.classList.remove('on'), 900); }
 function move(dx, dy) {
-  if (s.saver) { s.saver = false; return render(); }
+  if (!s.saver && !s.panel && !s.sheet) s.heartbeatArmed = true;
+  if (s.saver) { s.saver = false; s.heartbeatArmed = false; return render(); }
   if (s.panel) {
     if (dy) s.panel.i = Math.max(0, Math.min(OPTIONS.length - 1, s.panel.i + dy));
     if (dx) { const [, name, vals] = OPTIONS[s.panel.i]; if (!SUBMENU.has(name)) prefs[name] = vals[(vals.indexOf(prefs[name]) + dx + vals.length) % vals.length]; }
@@ -651,7 +653,7 @@ function move(dx, dy) {
   render();
 }
 function ok() {
-  if (s.saver) { s.saver = false; return render(); }
+  if (s.saver) { s.saver = false; s.heartbeatArmed = false; return render(); }
   if (s.panel) { if (!SUBMENU.has(OPTIONS[s.panel.i][1])) move(1, 0); else toast(OPTIONS[s.panel.i][1] === 'Location' ? 'Search city or postal code · choose a match on TV' : OPTIONS[s.panel.i][1]); return; }
   if (s.sheet) {
     const [label] = SHEET_ITEMS()[s.sheet.i]; s.sheet = null;
@@ -669,6 +671,7 @@ function ok() {
   toast('Opening ' + app.name);
 }
 function back() {
+  s.heartbeatArmed = false;
   if (s.saver) s.saver = false; else if (s.sheet) s.sheet = null; else if (s.panel) s.panel = null; else if (s.moving) s.moving = false;
   else if (s.view === 'shelf') { s.view = 'home'; s.area = 'row'; s.i = s.shelfApp; }
   else if (s.view === 'apps') { s.view = 'home'; s.area = 'row'; s.i = 0; }
@@ -691,6 +694,7 @@ document.addEventListener('keyup', e => { if (e.key === 'Enter') { clearTimeout(
 
 /* ---------- Toolbar (design review only) ---------- */
 function go(screen) {
+  s.heartbeatArmed = false;
   Object.assign(s, { view: 'home', area: 'row', i: 1, card: 0, shelfApp: 1, sheet: null, moving: false, panel: null, saver: false });
   if (screen === 'upnext') s.i = 4;
   if (screen === 'shelf') Object.assign(s, { view: 'shelf', shelfApp: 1, card: 0 });

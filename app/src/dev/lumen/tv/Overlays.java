@@ -53,10 +53,12 @@ final class Overlays {
         final int kind;
         final String label, key;
         String value;
+        android.text.StaticLayout note;
 
         Row(int kind, String label, String key, String value) { this.kind = kind; this.label = label; this.key = key; this.value = value; }
 
         boolean focusable() { return kind != HEAD && kind != NOTE; }
+        float height() { return kind == NOTE ? Math.max(36, note.getHeight() + 12) : ROW; }
     }
 
     private final Host host;
@@ -179,6 +181,11 @@ final class Overlays {
         } else {
             for (AppStore.App a : apps.all) rows.add(new Row(TOGGLE, a.label, a.pkg, p.contains(Prefs.SHELF_OFF, a.pkg) ? "Off" : "On"));
         }
+        android.text.TextPaint notePaint = new android.text.TextPaint(noteP);
+        notePaint.setColor(Ui.TEXT_3);
+        for (Row row : rows) if (row.kind == NOTE)
+            row.note = android.text.StaticLayout.Builder.obtain(row.label, 0, row.label.length(), notePaint, Math.round(600 - 2 * IN))
+                    .setIncludePad(false).setLineSpacing(4, 1).build();
     }
 
     void locationChanged() {
@@ -404,7 +411,7 @@ final class Overlays {
             Row row = rows.get(i);
             if (row.kind == HEAD) { y += 24; ys[i] = y; y += 21 + 8; continue; }
             ys[i] = y;
-            y += row.kind == NOTE ? 36 : ROW;
+            y += row.height();
         }
         float contentH = y + PAD;
         float w = 600, right = Ui.BAR_RIGHT, x = right - w, top = Ui.BAR_TOP + Ui.BAR_H + Ui.DROPDOWN_GAP;
@@ -448,7 +455,10 @@ final class Overlays {
             float ry = ys[i];
             if (ry - scroll.x > h || ry - scroll.x + ROW < 0) continue;
             if (row.kind == HEAD) { c.drawText(row.label, x + IN, ry + 21 * .73f, headP); continue; }
-            if (row.kind == NOTE) { noteP.setColor(Ui.TEXT_3); c.drawText(row.label, x + IN, baseline(noteP, ry, 36), noteP); continue; }
+            if (row.kind == NOTE) {
+                c.save(); c.translate(x + IN, ry + (row.height() - row.note.getHeight()) / 2);
+                row.note.draw(c); c.restore(); continue;
+            }
             float f = i == rowI ? Ui.clamp(1 - Math.abs(pill.x - i), 0, 1) : 0;
             rowP.setColor(Ui.mix(Ui.TEXT, Color.parseColor("#0c0c10"), f));
             c.drawText(row.label, x + IN, baseline(rowP, ry, ROW), rowP);

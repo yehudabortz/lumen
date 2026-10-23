@@ -44,7 +44,7 @@ a browser. The arrow keys act as the D-pad, Enter as OK (hold it for the tile me
 | Top Shelf | Heading at y = 262 px: **Top Picks for You**, 25 px SemiBold, then “across your apps” in 62% white. First card aligns to the floating dock's outer edge. Cards 376×211 px, radius 20, gap 28, with the episode/time line |
 | Dock | Glass (see Materials), centered, bottom edge at 81% of screen height. Padding 22 px; radius 42 px = tile radius + padding, so the curves are concentric |
 | Tiles | 16:9, radius 20 px. Medium 288×162 px (default, five across), Small 232×130 (six), Large 376×211 (four) |
-| Focus | Scale 1.09 (cards 1.07) over 240 ms, deep soft shadow and a low-contrast, static top-light sheen. Focused tiles and cards add a softly eased 0.4% double-beat pulse every 3.4 s; it restarts gently when Home regains focus. Reduced motion and open menus pause it. The dock's specular highlight slides to sit above the focused tile |
+| Focus | Scale 1.09 (cards 1.07) over 240 ms, deep soft shadow and a low-contrast, static top-light sheen. Focused tiles and cards add a softly eased 0.4% double-beat pulse every 3.4 s; it starts only after D-pad navigation. Home restores stable focus by app/content identity at rest, without a zoom replay or entry pulse. Focus springs are critically damped. Reduced motion and open menus pause it. The dock's specular highlight slides to sit above the focused tile |
 | Label | Focused tile only (default). 25 px SemiBold, 22 px under the dock |
 | Legibility | A dark vignette behind the clock and along the bottom, plus a soft band behind the shelf that strengthens on bright daytime scenes. During the All Apps scroll, a pre-blurred gradient sits above the moving dock and below the clock/date |
 
@@ -269,16 +269,26 @@ Selected rows in menus are near-white pills (94%) with dark text, as on a clean 
   renditions, each at most 2 MiB. After live search was installed, one TV reading was 81,002 KB PSS with the
   screensaver active and 72,018 KB after Home returned to foreground. These point samples include both activities
   and are not a controlled comparison with the earlier clean-restart Home measurement.
-- **Nothing personal in the repo.** The TV's address and the signing key live in a git-ignored `local.properties`
-  and `*.keystore`.
+- **Nothing personal in the repo.** Device addresses, credentials and personal TV screenshots stay out of tracked
+  source. Gallery captures use a clean emulator and public sample content. Signing keys and machine-specific
+  settings remain git-ignored in `*.keystore` and `local.properties`.
 
-## Gallery (from the mockup; app names, shows and artwork are placeholders)
+## Gallery (native Android captures with sample content)
+
+These are 1920 × 1080 captures of the production Android views running in a clean Google TV emulator.
+App tiles use public publisher artwork; recommendation titles and progress are fictional examples illustrated
+with NASA Earth imagery. The samples do not represent a streaming service's actual catalog or a user's history.
+The screensaver image captures its production view, independently of the emulator's DreamService policy.
+See the [capture workflow and artwork sources](../../tools/screenshots/README.md). The HTML mockup remains
+an interactive design reference; planned cinematic mode is not shown as a shipped screen.
 
 | | |
 |---|---|
-| ![Home](screens/home.jpg) Home: Alpine at dusk, Northfilm's shelf | ![Status bar](screens/status.jpg) Status bar focused: the gear chip |
+| ![Home](screens/home.jpg) Home: NASA wallpaper and mixed sample Top Picks | ![Status bar](screens/status.jpg) Status bar focused: the gear chip |
 | ![Settings](screens/settings.jpg) Settings dropdown from the status bar | ![Tile menu](screens/tile-menu.jpg) Tile menu (long-press OK) |
-| ![Up Next](screens/up-next.jpg) Up Next across apps | ![Cinematic](screens/cinematic.jpg) Cinematic: focus in the shelf |
-| ![All Apps](screens/all-apps.jpg) All Apps | ![Screensaver](screens/screensaver.jpg) Screensaver at night |
+| ![Continue Watching](screens/up-next.jpg) Continue Watching across sample apps | ![Top Picks focused](screens/top-picks.jpg) Focus in Top Picks |
+| ![All Apps](screens/all-apps.jpg) All Apps | ![Screensaver](screens/screensaver.jpg) Screensaver with a sample NASA Earth photo |
 | ![Forest by day](screens/forest-day.jpg) Forest by day | ![Dunes at dawn](screens/dunes-dawn.jpg) Dunes at dawn, Up Next |
 | ![Coast by day](screens/coast-day.jpg) Coast by day | ![Quiet](screens/quiet.jpg) Quiet: Black, Top Shelf off |
+
+![About settings](screens/about.jpg) About: creator credit and a wrapped privacy note inside the panel.

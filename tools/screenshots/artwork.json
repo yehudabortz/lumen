@@ -1,0 +1,152 @@
+{
+  "apps": [
+    {
+      "name": "YouTube",
+      "package": "com.google.android.youtube.tv",
+      "asset": "app-00.img",
+      "source": "https://play.google.com/store/apps/details?id=com.google.android.youtube.tv&hl=en_US",
+      "image": "https://play-lh.googleusercontent.com/OzCC2CEwKggMTTeFt_uAZ4Hp9W6b5_cGy29Pk36V-gAgh_w2ldR_2dVzo4B-7nClDUxo_mvkMG6LJ9o--ccvIw=s0-br30",
+      "sha256": "901036e6e3cf16b7fce07658510b4c6c51c3f15a9b2ccf0b470e3e78adc29cfd"
+    },
+    {
+      "name": "Netflix",
+      "package": "com.netflix.ninja",
+      "asset": "app-01.img",
+      "source": "https://play.google.com/store/apps/details?id=com.netflix.ninja&hl=en_US",
+      "image": "https://play-lh.googleusercontent.com/ndMigyoaH5k4aZ5GyIHj5ZNXEJQ_YTkcCByrX-m-IZE1xGJYfQZ9Hr3u1rFDK3EByo4VcDtBohg0Aqp3d3SW0Jo=s0-br30",
+      "sha256": "c0c232de4448a59e12e7cad3c901794bae62978af85cceb58ea2473c96a7005d"
+    },
+    {
+      "name": "Prime Video",
+      "package": "com.amazon.amazonvideo.livingroom",
+      "asset": "app-02.img",
+      "source": "https://play.google.com/store/apps/details?id=com.amazon.amazonvideo.livingroom&hl=en_US",
+      "image": "https://play-lh.googleusercontent.com/qyXqjzPggunbifX0ODhCehdy4ei0F90u0N3f4pPk8NhgCZD75dH8bdQYPROGRVlTVOs8B8JAT58X6ImMZv5ugHg=s0-br30",
+      "sha256": "134a477a21e807e6efe7c2aa4d5ee745e5dbc2d5960a122d55f31d937577f80f"
+    },
+    {
+      "name": "Hulu",
+      "package": "com.hulu.livingroomplus",
+      "asset": "app-03.img",
+      "source": "https://play.google.com/store/apps/details?id=com.hulu.livingroomplus&hl=en_US",
+      "image": "https://play-lh.googleusercontent.com/x-b0Dt61tgA4qii40Nmj0QMabrv2LtmZcn51Yu866Cb4dAL98BuyOG7fYtPSoT302LKaBh7fnHdhCqFLc_pjvQ=s0-br30",
+      "sha256": "443c5f529f99637c38298d8aec75509d3a9680822cc56efcd5e089edba31f2fb"
+    },
+    {
+      "name": "HBO Max",
+      "package": "com.wbd.stream",
+      "asset": "app-04.img",
+      "source": "https://play.google.com/store/apps/details?id=com.wbd.stream&hl=en_US",
+      "image": "https://play-lh.googleusercontent.com/wKJ5hN5CmSBWXPBVYYuRENzcEVb7FB6NyibjKqPT4SB0eoZ7Fww2jq-OhUDCxEPGALrSekQaazrHLSBwVb6T4A=s0-br30",
+      "sha256": "5a3daa49f8bb017fb2a9da3818e9823f640bfd3b077347aa533f90bcedc828cd"
+    },
+    {
+      "name": "Disney+",
+      "package": "com.disney.disneyplus",
+      "asset": "app-05.img",
+      "source": "https://play.google.com/store/apps/details?id=com.disney.disneyplus&hl=en_US",
+      "image": "https://play-lh.googleusercontent.com/AEX_3Bk5_SEZfR4fUcJsWiyqW_RRVcLED9AM2HMUVHAPVTZhZHfP2q3M35mRe4LtCXlb712DtkKwkZa_nJ-0=s0-br30",
+      "sha256": "988ba94c5c4b8585dec8be2a78f134973eab8a2e153a621b9a4bebdcbad956cc"
+    },
+    {
+      "name": "Plex",
+      "package": "com.plexapp.android",
+      "asset": "app-07.img",
+      "source": "https://play.google.com/store/apps/details?id=com.plexapp.android&hl=en_US",
+      "image": "https://play-lh.googleusercontent.com/0-rSvTIYVEveysANiSS5FITkkD-kpe6TG91nJRy7ht2J0BHlPWXiGaMcDRYUOwTVuZsE4-HyI-qSL0KkNEvQ=s0-br30",
+      "sha256": "8572305cffbc2cdd96aed4ff08891af7987b20e5e045fde922b8942ed791e30b"
+    },
+    {
+      "name": "Spotify",
+      "package": "com.spotify.tv.android",
+      "asset": "app-08.img",
+      "source": "https://play.google.com/store/apps/details?id=com.spotify.tv.android&hl=en_US",
+      "image": "https://play-lh.googleusercontent.com/7ghCqs4kKYrQpTECddnejlSeAXgpdiiKlIghuDR869MpF5msXdPsd3gqjC6lstD_NfJkmP0LAUJTty7UACcrLw=s0-br30",
+      "sha256": "cb07fd18a80ed2df38dc2d357ef3f90a5af327a44fa296e31876a835a045fd25"
+    },
+    {
+      "name": "VLC",
+      "package": "org.videolan.vlc",
+      "asset": "app-09.img",
+      "source": "https://play.google.com/store/apps/details?id=org.videolan.vlc&hl=en_US",
+      "image": "https://play-lh.googleusercontent.com/BG5YwziGHjh0wvWg6VO9c3iprYa3vFww1CnNqPvFszUVxcY4yB29dy7t2jsLwwI4jAqX08_--12FmMxgNG1JFg=s0-br30",
+      "sha256": "09462e5f1baf674618ed9afa49373fbf3757a691c40d95e7d686cb471042fb11"
+    },
+    {
+      "name": "Kodi",
+      "package": "org.xbmc.kodi",
+      "asset": "app-10.img",
+      "source": "https://play.google.com/store/apps/details?id=org.xbmc.kodi&hl=en_US",
+      "image": "https://play-lh.googleusercontent.com/-6H51wRiflGv_2wk-YIDtdzTV6t7ZqD9D4xLy7c3EDeaWWYoezZvPMkYNfCUuGU5Ae8XDOKQNfVkq-4t6tY0UA=s0-br30",
+      "sha256": "c2ae6bbc083d41ae9bbe2f00b0388c59ac03815e82896bbe563b682305ca1857"
+    },
+    {
+      "name": "Peacock",
+      "package": "com.peacocktv.peacockandroid",
+      "asset": "app-11.img",
+      "source": "https://play.google.com/store/apps/details?id=com.peacocktv.peacockandroid&hl=en_US",
+      "image": "https://play-lh.googleusercontent.com/FdlQY6tEE0p3FsJT9EbxB0BzKdXB1U84nNzAUl_YCC9HxRO1J82i8-XWuN_BD1zReblXht3-cvUreuogHrPk-A=s0-br30",
+      "sha256": "71884888501e2fe3bc561586a94be8fa07202204220a7dea512dedf0ebcf7579"
+    },
+    {
+      "name": "Paramount+",
+      "package": "com.cbs.ott",
+      "asset": "app-12.img",
+      "source": "https://play.google.com/store/apps/details?id=com.cbs.ott&hl=en_US",
+      "image": "https://play-lh.googleusercontent.com/O5QHZxy2pkxwHrjU3Omd_1jdIYk_pZQexy2VVEDBDhaXgNhvZV7wjhfN_0kLUrQfCKFsaGbQbVm8usyrc-yBGhI=s0-br30",
+      "sha256": "91388de4722bc30e37a3ea7a531ca23c1a959207e3d9242b442e2d04b925b997"
+    }
+  ],
+  "cards": [
+    {
+      "title": "Earth from Orbit",
+      "asset": "card-00.jpg",
+      "nasa_id": "iss073e0420556",
+      "image_title": "California's Central Valley toward the Rocky Mountains",
+      "credit": "JSC",
+      "image": "https://images-assets.nasa.gov/image/iss073e0420556/iss073e0420556~large.jpg",
+      "source": "https://images.nasa.gov/details/iss073e0420556",
+      "sha256": "a4aae40f230b121fd04eb3e7b36322fd1f7eba3aab7f1f91e673b821fb532361"
+    },
+    {
+      "title": "The Living Ocean",
+      "asset": "card-01.jpg",
+      "nasa_id": "iss073e0422797",
+      "image_title": "A tropical storm in the Pacific Ocean near Japan",
+      "credit": "JSC",
+      "image": "https://images-assets.nasa.gov/image/iss073e0422797/iss073e0422797~large.jpg",
+      "source": "https://images.nasa.gov/details/iss073e0422797",
+      "sha256": "f21006e78bc19e2a79d86690aa0192d86a06dc4f1529bf1c1f90d9ae9f1740ef"
+    },
+    {
+      "title": "Chasing the Aurora",
+      "asset": "card-02.jpg",
+      "nasa_id": "iss073e0035898",
+      "image_title": "An atmospheric glow crowns Earth's horizon as an aurora streams",
+      "credit": "JSC",
+      "image": "https://images-assets.nasa.gov/image/iss073e0035898/iss073e0035898~large.jpg",
+      "source": "https://images.nasa.gov/details/iss073e0035898",
+      "sha256": "8c628701dec93770a19a51aeb31ee4792679674e7d1a96d76bedbf47187cd1d2"
+    },
+    {
+      "title": "Islands of Blue",
+      "asset": "card-03.jpg",
+      "nasa_id": "iss074e0785398",
+      "image_title": "Sandbars and submerged dunes off the coast of the island of Eleuthera in the Bahamas",
+      "credit": "JSC",
+      "image": "https://images-assets.nasa.gov/image/iss074e0785398/iss074e0785398~large.jpg",
+      "source": "https://images.nasa.gov/details/iss074e0785398",
+      "sha256": "415bdc984fd6163c79e1aff12dcff6a49c6456c38779a375d4a4c8579283a849"
+    },
+    {
+      "title": "Wild Coastlines",
+      "asset": "card-04.jpg",
+      "nasa_id": "iss074e0043972",
+      "image_title": "Villages light up the coastline in this nighttime image of Lake Sevan",
+      "credit": "JSC",
+      "image": "https://images-assets.nasa.gov/image/iss074e0043972/iss074e0043972~large.jpg",
+      "source": "https://images.nasa.gov/details/iss074e0043972",
+      "sha256": "71a718b388bef9fd577e7e5db2ba017950f6467dadcb04534a056d56d1b3cce1"
+    }
+  ]
+}

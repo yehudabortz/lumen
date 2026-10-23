@@ -80,6 +80,7 @@ final class HomeView extends View implements Overlays.Host {
     private final Spring appsS = new Spring(1.9f, .95f), rowScroll = new Spring(2.3f, 1f), cardScroll = new Spring(2.3f, 1f),
             gridScroll = new Spring(2.3f, 1f), spec = new Spring(2.1f, .88f);
     private final Map<Object, Spring> focus = new HashMap<>();
+    private boolean returningHome = true, heartbeatArmed;
     private long lastFrame, lastKey, toastUntil, heartbeatEpoch = SystemClock.uptimeMillis();
     private String toast, clockText;
     private int clockMinute = -1;
@@ -175,6 +176,9 @@ final class HomeView extends View implements Overlays.Host {
         gridI = Math.min(gridI, Math.max(0, a.rest.size() - 1));
         if (a.row.isEmpty() && area == Area.ROW && !a.rest.isEmpty()) { area = Area.GRID; appsS.target = 1; }
         refreshShelf();
+        pruneFocus();
+        if (returningHome) { settleFocus(); returningHome = false; }
+        seedCurrentFocus();
         invalidate();
     }
 
@@ -182,6 +186,8 @@ final class HomeView extends View implements Overlays.Host {
         shelfData = sh;
         art.forgetFailures();
         refreshShelf();
+        pruneFocus();
+        seedCurrentFocus();
         invalidate();
     }
 
@@ -207,17 +213,68 @@ final class HomeView extends View implements Overlays.Host {
     }
 
     void hostWindowFocusChanged(boolean hasFocus) {
-        if (!hasFocus) return;
+        prepareHomeEntry();
+        if (!hasFocus) returningHome = true;
+    }
+
+    /** Returning Home restores an already focused tile; only D-pad navigation should animate selection. */
+    void prepareHomeEntry() {
+        returningHome = true;
+        heartbeatArmed = false;
         heartbeatEpoch = SystemClock.uptimeMillis() + HEARTBEAT_SETTLE_MS;
+        lastFrame = 0;
+        settleFocus();
         invalidate();
+    }
+
+    private Object focusKey(Object key) {
+        if (key instanceof AppStore.App) return ((AppStore.App) key).pkg;
+        if (key instanceof ShelfStore.Item) return ((ShelfStore.Item) key).focusKey();
+        return key;
+    }
+
+    private Object selectedFocusKey() {
+        if (area == Area.STATUS) return STATUS_KEY;
+        if (area == Area.ROW && apps != null && !apps.row.isEmpty()) return focusKey(apps.row.get(rowI));
+        if (area == Area.GRID && apps != null && !apps.rest.isEmpty()) return focusKey(apps.rest.get(gridI));
+        if (area == Area.SHELF && shelf != null && !shelf.items.isEmpty()) return focusKey(shelf.items.get(cardI));
+        return null;
+    }
+
+    private void seedCurrentFocus() {
+        Object selected = selectedFocusKey();
+        if (selected != null && !focus.containsKey(selected)) focus.put(selected, new Spring(2.8f, 1f).at(1));
+    }
+
+    private void settleFocus() {
+        Object selected = selectedFocusKey();
+        for (Map.Entry<Object, Spring> entry : focus.entrySet()) entry.getValue().at(entry.getKey().equals(selected) ? 1 : 0);
+        seedCurrentFocus();
+        spec.at(0);  // The first frame places the dock light directly above the restored selection.
+    }
+
+    private void pruneFocus() {
+        java.util.Set<Object> present = new java.util.HashSet<>();
+        present.add(STATUS_KEY);
+        if (apps != null) for (AppStore.App app : apps.all) present.add(focusKey(app));
+        if (shelf != null) for (ShelfStore.Item item : shelf.items) present.add(focusKey(item));
+        focus.keySet().retainAll(present);
     }
 
     private void refreshShelf() {
         if (shelfData == null) { shelf = null; return; }
         java.util.Set<String> excluded = prefs.set(Prefs.SHELF_OFF);
         excluded.addAll(prefs.set(Prefs.HIDDEN));
+        Object selected = area == Area.SHELF ? selectedFocusKey() : null;
         ShelfStore.Shelf next = shelfData.forHome(prefs.get(Prefs.SHELF), excluded);
-        if (next != shelf) { shelf = next; cardI = 0; cardScroll.at(0); if (area == Area.SHELF && shelf == null) area = Area.ROW; }
+        if (next != shelf) {
+            shelf = next;
+            cardI = 0;
+            if (selected != null && shelf != null) for (int i = 0; i < shelf.items.size(); i++)
+                if (selected.equals(focusKey(shelf.items.get(i)))) { cardI = i; break; }
+            if (cardI == 0) cardScroll.at(0);
+            if (area == Area.SHELF && shelf == null) area = Area.ROW;
+        }
     }
 
     private boolean reduced() { return prefs.is(Prefs.MOTION, "reduced"); }
@@ -394,6 +451,7 @@ final class HomeView extends View implements Overlays.Host {
     }
 
     private void focusChanged() {
+        heartbeatArmed = true;
         heartbeatEpoch = SystemClock.uptimeMillis();
     }
 
@@ -503,7 +561,7 @@ final class HomeView extends View implements Overlays.Host {
     }
 
     private boolean heartbeatActive() {
-        if (reduced() || overlays.isOpen() || moving) return false;
+        if (!heartbeatArmed || reduced() || overlays.isOpen() || moving) return false;
         if (area == Area.ROW) return apps != null && !apps.row.isEmpty();
         if (area == Area.GRID) return apps != null && !apps.rest.isEmpty();
         return area == Area.SHELF && shelf != null && !shelf.items.isEmpty();
@@ -511,7 +569,7 @@ final class HomeView extends View implements Overlays.Host {
 
     /** A quiet double-beat scale bump on focused tiles/cards; settings and menus stay still. */
     private float heartbeatScale(float focusAmount) {
-        if (focusAmount < .75f || reduced() || overlays.isOpen()) return 1;
+        if (!heartbeatArmed || focusAmount < .75f || reduced() || overlays.isOpen()) return 1;
         float t = (SystemClock.uptimeMillis() - heartbeatEpoch) % HEARTBEAT_MS;
         float first = beat(t, 220, 520, 1);
         float second = beat(t, 900, 620, .55f);
@@ -579,16 +637,17 @@ final class HomeView extends View implements Overlays.Host {
     }
 
     private boolean ease(Object key, boolean focused, long dt) {
+        key = focusKey(key);
         Spring sp = focus.get(key);
         if (sp == null) {
             if (!focused) return false;
-            focus.put(key, sp = reduced() ? new Spring(4.5f, 1f) : new Spring(2.8f, .72f));
+            focus.put(key, sp = reduced() ? new Spring(4.5f, 1f) : new Spring(2.8f, 1f));
         }
         sp.target = focused ? 1 : 0;
         return sp.step(dt);
     }
 
-    private float focusOf(Object key) { Spring sp = focus.get(key); return sp == null ? 0 : sp.x; }
+    private float focusOf(Object key) { Spring sp = focus.get(focusKey(key)); return sp == null ? 0 : sp.x; }
 
     private void drawBackground(Canvas c) {
         r.set(0, 0, Ui.W, Ui.H);

@@ -1,11 +1,19 @@
 # NASA photos
 
-Lumen searches the public [NASA Image and Video Library](https://images.nasa.gov) API for Earth and nature images,
-using rotating live searches for oceans, clouds, forests, mountains, auroras, coasts, and glaciers. It filters out
-catalog entries identified as concept art, diagrams, simulations, or people-focused images. At each rotation, it
-chooses an image from the current search results and downloads the result's large or medium JPEG rendition. The
-result set is live; Lumen does not ship or maintain
-a predefined set of image IDs. No account or API key is needed. NASA documents the public search API in its
+Lumen searches the public [NASA Image and Video Library](https://images.nasa.gov) for modern **ISS camera
+photographs of Earth**, with scenic subjects such as coastlines, mountains, islands, dunes, oceans, glaciers,
+clouds and auroras. Searches target the title field in Johnson Space Center's archive from 2010 onward, and
+require an ISS photographic record with a scenic subject in its title. General event and planetary collections
+are excluded. Results still come from live searches at each rotation; no image IDs are predefined.
+
+The selector rejects people/events/training, launch and spacecraft hardware, radar and Doppler products,
+false-color/infrared imagery, maps, models, diagrams and other-world terrain. Natural-color and photographic
+records rank higher, with variety retained within the strongest matches. New downloads must be landscape
+JPEGs at least 1000 × 600 pixels, at most 1920 × 1280 and 2 MiB. A small sampled exposure check rejects
+mostly black or blank frames. Search, selection, downloading and this check run in the background. These
+conservative catalog and exposure checks improve the pool; they cannot measure subjective beauty perfectly.
+
+No account or API key is needed. NASA documents the public search fields in its
 [API guide](https://images.nasa.gov/docs/images.nasa.gov_api_docs.pdf).
 
 The image title and photographer or NASA center are shown on screen. Lumen keeps the original image file and
@@ -26,3 +34,7 @@ generally not copyrighted in the United States, but third-party credits and exce
 
 NASA search results can contain third-party material; displayed attribution is taken from each result's
 photographer or NASA center field. The API metadata is the source for the label shown by Lumen.
+
+The scenic policy uses a fresh cache namespace, so previously selected event or technical images are discarded
+on upgrade. Old cache files are removed by the background worker. Offline fallback remains the last good
+photo from the new scenic collection, or the drawn landscape while the first eligible photo loads.

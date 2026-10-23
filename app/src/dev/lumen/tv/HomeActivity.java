@@ -80,6 +80,7 @@ public final class HomeActivity extends Activity implements HomeView.Host {
     @Override protected void onResume() {
         super.onResume();
         resumed = true;
+        view.prepareHomeEntry();
         loadApps();
         loadShelf();
         main.removeCallbacks(tick);
@@ -89,6 +90,7 @@ public final class HomeActivity extends Activity implements HomeView.Host {
     @Override protected void onPause() {
         super.onPause();
         resumed = false;
+        view.hostWindowFocusChanged(false);
         main.removeCallbacks(tick);
     }
 
@@ -99,7 +101,7 @@ public final class HomeActivity extends Activity implements HomeView.Host {
 
     @Override protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
-        if (resumed) view.reset();  // Home pressed while already home
+        if (resumed) { view.reset(); view.prepareHomeEntry(); }  // Home restores settled focus
     }
 
     @Override protected void onDestroy() {

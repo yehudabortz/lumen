@@ -1,0 +1,5 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="dev.lumen.tv.capture">
+    <application android:label="Lumen screenshot fixtures" android:allowBackup="false" />
+    <instrumentation android:name="dev.lumen.tv.ScreenshotCapture"
+        android:targetPackage="dev.lumen.tv" android:label="Lumen screenshot capture" />
+</manifest>
