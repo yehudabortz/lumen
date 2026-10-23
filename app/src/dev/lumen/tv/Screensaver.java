@@ -12,6 +12,7 @@ import android.os.SystemClock;
 import android.service.dreams.DreamService;
 import android.text.format.DateFormat;
 import android.view.View;
+import android.view.KeyEvent;
 
 import java.util.Calendar;
 import java.util.Random;
@@ -22,12 +23,30 @@ import java.util.Random;
  * so nothing burns into an OLED panel. Any remote key exits the dream and returns to the underlying home screen.
  */
 public final class Screensaver extends DreamService {
+    private static volatile long suppressHomeBackUntil;
+
+    static boolean consumeHomeBack(KeyEvent event) {
+        if (event.getKeyCode() != KeyEvent.KEYCODE_BACK && event.getKeyCode() != KeyEvent.KEYCODE_ESCAPE) return false;
+        if (SystemClock.uptimeMillis() > suppressHomeBackUntil) return false;
+        if (event.getAction() == KeyEvent.ACTION_UP) suppressHomeBackUntil = 0;
+        return true;
+    }
+
+    private static void suppressHomeBack() {
+        suppressHomeBackUntil = SystemClock.uptimeMillis() + 1500;
+    }
+
     @Override public void onAttachedToWindow() {
         super.onAttachedToWindow();
         setInteractive(true);
         setFullscreen(true);
         setScreenBright(true);
         setContentView(new SaverView(this));
+    }
+
+    @Override public void onDreamingStopped() {
+        suppressHomeBack();
+        super.onDreamingStopped();
     }
 
     static final class SaverView extends View {
@@ -68,12 +87,14 @@ public final class Screensaver extends DreamService {
         }
 
         @Override public boolean onKeyDown(int keyCode, android.view.KeyEvent event) {
+            if (keyCode == KeyEvent.KEYCODE_BACK || keyCode == KeyEvent.KEYCODE_ESCAPE) suppressHomeBack();
             return true;
         }
 
         @Override public boolean onKeyUp(int keyCode, android.view.KeyEvent event) {
             // Consume the complete press before finishing; otherwise Home can receive the
             // trailing Back event and immediately launch the screensaver again.
+            if (keyCode == KeyEvent.KEYCODE_BACK || keyCode == KeyEvent.KEYCODE_ESCAPE) suppressHomeBack();
             post(() -> ((Screensaver) getContext()).finish());
             return true;
         }

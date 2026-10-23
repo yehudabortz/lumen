@@ -115,6 +115,7 @@
   .card .meta span { display: block; font-size: 21px; font-weight: 500; color: var(--text-2); text-shadow: 0 2px 12px rgba(0,0,0,.35); }
   .card.focus .meta span { color: var(--text); }
   .card.focus .pic { transform: scale(1.07); box-shadow: 0 26px 44px -14px rgba(0,0,0,.7), 0 8px 16px -6px rgba(0,0,0,.45); }
+  .stage:not(.busy) .card.focus .pic { animation: heartbeat 3400ms infinite; }
   .card.focus .meta { transform: translateY(8px); }
   .glint::after { content: ""; position: absolute; inset: -40%; pointer-events: none; z-index: 4; opacity: 0;
                background: linear-gradient(112deg, transparent 38%, rgba(255,255,255,.26) 48%, rgba(255,255,255,.08) 54%, transparent 62%);
@@ -150,6 +151,12 @@
   .tile .art::before { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 2;
                box-shadow: inset 0 0 0 1px rgba(255,255,255,.10), inset 0 1.5px 0 rgba(255,255,255,.22); }
   .tile.focus { transform: scale(1.09); z-index: 2; box-shadow: 0 26px 44px -14px rgba(0,0,0,.65), 0 8px 16px -6px rgba(0,0,0,.4); }
+  .stage:not(.busy) .tile.focus:not(.moving) { animation: heartbeat 3400ms infinite; }
+  @keyframes heartbeat {
+    0%, 6.5%, 21.8%, 26.5%, 44.7%, 100% { scale: 1; }
+    14% { scale: 1.004; }
+    35% { scale: 1.0022; }
+  }
   .tile.focus .art > .top { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(255,255,255,.14), transparent 45%); }
   .wordmark { font-weight: 650; letter-spacing: -.035em; }
 

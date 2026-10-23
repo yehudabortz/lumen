@@ -1,6 +1,7 @@
 package dev.lumen.tv;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapShader;
 import android.graphics.Canvas;
@@ -45,6 +46,8 @@ final class HomeView extends View implements Overlays.Host {
     private static final float R_TILE = 20, R_DOCK = R_TILE + PAD, DOCK_BOTTOM = 872, ROW_MAX = 5;
     private static final float SHELF_TOP = 262, CARD_W = 376, CARD_H = 211, CARD_TOP = SHELF_TOP + 50;
     private static final float GRID_TOP = 1018, GRID_STEP_Y = TILE_H + 70, APPS_SHIFT = 540;
+    private static final long HEARTBEAT_MS = 3400;
+    private static final long HEARTBEAT_SETTLE_MS = 700;
 
     private enum Area { ROW, SHELF, GRID, STATUS }  // STATUS: the clock-and-weather pill (settings)
     private static final Object STATUS_KEY = new Object();
@@ -52,6 +55,7 @@ final class HomeView extends View implements Overlays.Host {
 
     private final Host host;
     private final Prefs prefs;
+    private final SharedPreferences focusPrefs;
     private final Overlays overlays;
     private float s = 1;  // screen px per design px
 
@@ -77,7 +81,7 @@ final class HomeView extends View implements Overlays.Host {
             gridScroll = new Spring(2.3f, 1f), spec = new Spring(2.1f, .88f);
     private final Map<Object, Spring> focus = new HashMap<>();
     private final Map<Object, Long> glints = new HashMap<>();
-    private long lastFrame, lastKey, toastUntil;
+    private long lastFrame, lastKey, toastUntil, heartbeatEpoch = SystemClock.uptimeMillis();
     private String toast, clockText;
     private int clockMinute = -1;
 
@@ -108,6 +112,7 @@ final class HomeView extends View implements Overlays.Host {
         this.host = host;
         Ui.init(c);
         prefs = new Prefs(c);
+        focusPrefs = c.getSharedPreferences("lumen", Context.MODE_PRIVATE);
         overlays = new Overlays(this);
         setFocusable(true);
         setFocusableInTouchMode(true);
@@ -157,6 +162,13 @@ final class HomeView extends View implements Overlays.Host {
 
     void setApps(AppStore a) {
         apps = a;
+        heartbeatEpoch = SystemClock.uptimeMillis() + HEARTBEAT_SETTLE_MS;
+        String focusedPackage = focusPrefs.getString("homeFocusPackage", null);
+        if (focusedPackage != null) {
+            for (int i = 0; i < a.row.size(); i++) if (focusedPackage.equals(a.row.get(i).pkg)) { rowI = i; break; }
+            if (rowI >= a.row.size() || !focusedPackage.equals(a.row.get(rowI).pkg))
+                focusPrefs.edit().remove("homeFocusPackage").apply();
+        }
         rowI = Math.min(rowI, Math.max(0, a.row.size() - 1));
         gridI = Math.min(gridI, Math.max(0, a.rest.size() - 1));
         if (a.row.isEmpty() && area == Area.ROW && !a.rest.isEmpty()) { area = Area.GRID; appsS.target = 1; }
@@ -185,9 +197,16 @@ final class HomeView extends View implements Overlays.Host {
     void reset() {
         if (overlays.isOpen()) overlays.close();
         area = Area.ROW;
+        heartbeatEpoch = SystemClock.uptimeMillis() + HEARTBEAT_SETTLE_MS;
         appsS.target = 0;
         moving = false;
         refreshShelf();
+        invalidate();
+    }
+
+    void hostWindowFocusChanged(boolean hasFocus) {
+        if (!hasFocus) return;
+        heartbeatEpoch = SystemClock.uptimeMillis() + HEARTBEAT_SETTLE_MS;
         invalidate();
     }
 
@@ -328,7 +347,13 @@ final class HomeView extends View implements Overlays.Host {
             else if (n >= 0 && n < rest.size() && (dx == 0 || n / 5 == gridI / 5)) { gridI = n; glint(rest.get(gridI)); }
             else if (dy > 0 && n >= rest.size() && gridI / 5 < (rest.size() - 1) / 5) { gridI = rest.size() - 1; glint(rest.get(gridI)); }
         }
+        rememberFocusedApp();
         invalidate();
+    }
+
+    private void rememberFocusedApp() {
+        if (area == Area.ROW && apps != null && rowI >= 0 && rowI < apps.row.size())
+            focusPrefs.edit().putString("homeFocusPackage", apps.row.get(rowI).pkg).apply();
     }
 
     private void toStatus() {
@@ -366,7 +391,10 @@ final class HomeView extends View implements Overlays.Host {
         invalidate();
     }
 
-    private void glint(Object o) { if (!reduced()) glints.put(o, SystemClock.uptimeMillis()); }
+    private void glint(Object o) {
+        heartbeatEpoch = SystemClock.uptimeMillis();
+        if (!reduced()) glints.put(o, heartbeatEpoch);
+    }
 
     private void showToast(String t) { toast = t; toastUntil = SystemClock.uptimeMillis() + 2200; invalidate(); }
 
@@ -471,7 +499,31 @@ final class HomeView extends View implements Overlays.Host {
         boolean glinting = false;
         for (long g : glints.values()) if (now - g < 1000) { glinting = true; break; }
         if (anim || glinting || moving || (toast != null && now < toastUntil + 400)) postInvalidateOnAnimation();
+        else if (heartbeatActive()) postInvalidateDelayed(64);
         else lastFrame = 0;  // idle: the next frame starts fresh
+    }
+
+    private boolean heartbeatActive() {
+        if (reduced() || overlays.isOpen() || moving) return false;
+        if (area == Area.ROW) return apps != null && !apps.row.isEmpty();
+        if (area == Area.GRID) return apps != null && !apps.rest.isEmpty();
+        return area == Area.SHELF && shelf != null && !shelf.items.isEmpty();
+    }
+
+    /** A quiet double-beat scale bump on focused tiles/cards; settings and menus stay still. */
+    private float heartbeatScale(float focusAmount) {
+        if (focusAmount < .75f || reduced() || overlays.isOpen()) return 1;
+        float t = (SystemClock.uptimeMillis() - heartbeatEpoch) % HEARTBEAT_MS;
+        float first = beat(t, 220, 520, 1);
+        float second = beat(t, 900, 620, .55f);
+        return 1 + .004f * Math.max(first, second);
+    }
+
+    private static float beat(float t, float start, float duration, float strength) {
+        float phase = (t - start) / duration;
+        if (phase <= 0 || phase >= 1) return 0;
+        float wave = (float) Math.sin(Math.PI * phase);
+        return strength * wave * wave;
     }
 
     private void drawHome(Canvas c, long now) {
@@ -686,7 +738,7 @@ final class HomeView extends View implements Overlays.Host {
     }
 
     private void drawCard(Canvas c, ShelfStore.Item it, float x, float y, int alpha) {
-        float f = focusOf(it), sc = reduced() ? 1 : 1 + .07f * f;
+        float f = focusOf(it), sc = (reduced() ? 1 : 1 + .07f * f) * heartbeatScale(f);
         float cx = x + CARD_W / 2, cy = y + CARD_H / 2, w = CARD_W * sc, h = CARD_H * sc;
         r.set(cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2);
         Shadow.draw(c, r, R_TILE * sc, Ui.lerp(12, 20, f), Ui.lerp(8, 20, f), Ui.lerp(.38f, .58f, f) * alpha / 255f, bmp);
@@ -816,7 +868,7 @@ final class HomeView extends View implements Overlays.Host {
     }
 
     private void drawTile(Canvas c, AppStore.App a, float x, float y, boolean wiggle, float alpha) {
-        float f = focusOf(a), sc = reduced() ? 1 : 1 + .09f * f;
+        float f = focusOf(a), sc = (reduced() ? 1 : 1 + .09f * f) * heartbeatScale(f);
         float cx = x + TILE_W / 2, cy = y + TILE_H / 2, tw = TILE_W * sc, th = TILE_H * sc;
         int al = Math.round(255 * alpha);
         c.save();

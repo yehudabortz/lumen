@@ -92,6 +92,11 @@ public final class HomeActivity extends Activity implements HomeView.Host {
         main.removeCallbacks(tick);
     }
 
+    @Override public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (view != null) view.hostWindowFocusChanged(hasFocus);
+    }
+
     @Override protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         if (resumed) view.reset();  // Home pressed while already home
@@ -120,6 +125,7 @@ public final class HomeActivity extends Activity implements HomeView.Host {
     }
 
     @Override public boolean dispatchKeyEvent(KeyEvent e) {
+        if (Screensaver.consumeHomeBack(e)) return true;
         if (view.onKey(e.getKeyCode(), e)) return true;
         return super.dispatchKeyEvent(e);
     }

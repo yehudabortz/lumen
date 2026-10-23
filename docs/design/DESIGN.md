@@ -44,7 +44,7 @@ a browser. The arrow keys act as the D-pad, Enter as OK (hold it for the tile me
 | Top Shelf | Heading at y = 262 px: **Top Picks for You**, 25 px SemiBold, then “across your apps” in 62% white. First card aligns to the floating dock's outer edge. Cards 376×211 px, radius 20, gap 28, with the episode/time line |
 | Dock | Glass (see Materials), centered, bottom edge at 81% of screen height. Padding 22 px; radius 42 px = tile radius + padding, so the curves are concentric |
 | Tiles | 16:9, radius 20 px. Medium 288×162 px (default, five across), Small 232×130 (six), Large 376×211 (four) |
-| Focus | Scale 1.09 (cards 1.07) over 240 ms, deep soft shadow, a top-light sheen and one glint that sweeps across. The dock's specular highlight slides to sit above the focused tile |
+| Focus | Scale 1.09 (cards 1.07) over 240 ms, deep soft shadow, a top-light sheen and one glint that sweeps across. Focused tiles and cards add a softly eased 0.4% double-beat pulse every 3.4 s; it restarts gently when Home regains focus. Reduced motion and open menus pause it. The dock's specular highlight slides to sit above the focused tile |
 | Label | Focused tile only (default). 25 px SemiBold, 22 px under the dock |
 | Legibility | A dark vignette behind the clock and along the bottom, plus a soft band behind the shelf that strengthens on bright daytime scenes. During the All Apps scroll, a pre-blurred gradient sits above the moving dock and below the clock/date |
 
