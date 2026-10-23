@@ -25,23 +25,24 @@ final class Prefs {
         boolean isPage() { return values == null; }
     }
 
-    static final String PAGE_SHELF_APPS = "page:shelfApps", PAGE_HIDDEN = "page:hidden";
+    static final String PAGE_SHELF_APPS = "page:shelfApps", PAGE_HIDDEN = "page:hidden", PAGE_LOCATION = "page:location";
 
     static final Option[] OPTIONS = {
         new Option("Appearance", BACKGROUND, "Background",
-                new String[]{"alpine", "forest", "dunes", "coast", "unsplash", "graphite", "black"},
-                new String[]{"Alpine", "Forest", "Dunes", "Coast", "Unsplash", "Graphite", "Black"}),
+                new String[]{"alpine", "forest", "dunes", "coast", "nasa", "unsplash", "graphite", "black"},
+                new String[]{"Alpine", "Forest", "Dunes", "Coast", "NASA photos", "Unsplash", "Graphite", "Black"}),
         new Option("Appearance", PHOTOS, "New photo", new String[]{"hour", "day"}, new String[]{"Every hour", "Every day"}),
         new Option("Appearance", TIME_OF_DAY, "Follow time of day", new String[]{"on", "off"}, new String[]{"On", "Off"}),
         new Option("Appearance", MOTION, "Motion", new String[]{"full", "reduced"}, new String[]{"Full", "Reduced"}),
-        new Option("Top Shelf", SHELF, "Top Shelf", new String[]{"rich", "upnext", "off"}, new String[]{"Rich", "Up Next only", "Off"}),
+        new Option("Top Shelf", SHELF, "Top Shelf", new String[]{"rich", "upnext", "off"}, new String[]{"Top Picks for You", "Continue Watching", "Off"}),
         new Option("Top Shelf", PAGE_SHELF_APPS, "Apps in Top Shelf", null, null),
         new Option("Top Row", LABELS, "Labels", new String[]{"focus", "always", "never"}, new String[]{"On focus", "Always", "Never"}),
         new Option("Clock & Weather", CLOCK, "Clock", new String[]{"system", "12", "24", "off"}, new String[]{"System", "12-hour", "24-hour", "Off"}),
         new Option("Clock & Weather", DATE, "Show date", new String[]{"off", "on"}, new String[]{"Off", "On"}),
         new Option("Clock & Weather", WEATHER, "Weather", new String[]{"on", "off"}, new String[]{"On", "Off"}),
+        new Option("Clock & Weather", PAGE_LOCATION, "Location", null, null),
         new Option("Clock & Weather", UNITS, "Units", new String[]{"auto", "f", "c"}, new String[]{"Auto", "°F", "°C"}),
-        new Option("Screensaver", SAVER, "Screensaver", new String[]{"unsplash", "scene", "black"}, new String[]{"Unsplash photos", "Landscape", "Black"}),
+        new Option("Screensaver", SAVER, "Screensaver", new String[]{"nasa", "unsplash", "scene", "black"}, new String[]{"NASA photos", "Unsplash photos", "Landscape", "Black"}),
         new Option("Apps", PAGE_HIDDEN, "Hidden apps", null, null),
     };
 
@@ -66,7 +67,7 @@ final class Prefs {
 
     /** Whether a row applies right now (photo frequency only matters for an Unsplash background). */
     boolean relevant(Option o) {
-        if (PHOTOS.equals(o.key)) return is(BACKGROUND, "unsplash");
+        if (PHOTOS.equals(o.key)) return is(BACKGROUND, "unsplash") || is(BACKGROUND, "nasa");
         return true;
     }
 
@@ -92,6 +93,17 @@ final class Prefs {
         while (i < o.values.length && !o.values[i].equals(v)) i++;
         do i = (i + dir + o.values.length) % o.values.length; while (!usable(o.values[i]));
         sp.edit().putString(key, o.values[i]).apply();
+    }
+
+    Weather.Place city() {
+        String saved = sp.getString("weatherCity", null);
+        if (saved == null) return null;
+        try { return new Weather.Place(new org.json.JSONObject(saved)); }
+        catch (Exception ignored) { return null; }
+    }
+
+    void city(Weather.Place city) {
+        sp.edit().putString("weatherCity", city == null ? null : city.json().toString()).apply();
     }
 
     Set<String> set(String key) { return new HashSet<>(sp.getStringSet(key, Collections.<String>emptySet())); }

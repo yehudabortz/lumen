@@ -2,12 +2,18 @@ package dev.lumen.tv;
 
 import android.os.Handler;
 import android.os.Looper;
+import android.os.SystemClock;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLEncoder;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
@@ -15,10 +21,53 @@ import java.util.TimeZone;
 
 /**
  * Current weather from Open-Meteo (free, no key, no account), refreshed every 30 minutes. The location comes
- * from the TV's time zone, so no location permission is needed. Offline, the weather simply isn't shown.
+ * from a saved city, falling back to an approximate time-zone city. No location permission is needed.
  */
 final class Weather {
     interface Listener { void onWeather(); }
+
+    /** A geocoded city. The full label disambiguates places with the same name. */
+    static final class Place {
+        final String name, label;
+        final double latitude, longitude;
+
+        Place(JSONObject j) throws Exception {
+            name = j.getString("name");
+            latitude = j.getDouble("latitude");
+            longitude = j.getDouble("longitude");
+            if (!Double.isFinite(latitude) || !Double.isFinite(longitude)
+                    || Math.abs(latitude) > 90 || Math.abs(longitude) > 180) throw new IllegalArgumentException("coordinates");
+            String region = j.optString("admin1", ""), country = j.optString("country", "");
+            label = j.optString("label", name + (region.isEmpty() || region.equals(name) ? "" : ", " + region)
+                    + (country.isEmpty() ? "" : ", " + country));
+        }
+
+        JSONObject json() {
+            JSONObject j = new JSONObject();
+            try { j.put("name", name).put("label", label).put("latitude", latitude).put("longitude", longitude); }
+            catch (Exception e) { throw new IllegalStateException(e); }
+            return j;
+        }
+    }
+
+    static List<Place> search(String query) throws Exception {
+        String language = URLEncoder.encode(Locale.getDefault().getLanguage(), "UTF-8");
+        JSONObject j = request("https://geocoding-api.open-meteo.com/v1/search?name="
+                + URLEncoder.encode(query, "UTF-8") + "&count=5&language=" + language + "&format=json");
+        List<Place> places = new ArrayList<>();
+        JSONArray results = j.optJSONArray("results");
+        if (results != null) for (int i = 0; i < results.length(); i++) places.add(new Place(results.getJSONObject(i)));
+        return places;
+    }
+
+    private static JSONObject request(String url) throws Exception {
+        HttpURLConnection con = (HttpURLConnection) new URL(url).openConnection();
+        con.setConnectTimeout(8000);
+        con.setReadTimeout(8000);
+        try (InputStream in = con.getInputStream(); Scanner scanner = new Scanner(in, "UTF-8").useDelimiter("\\A")) {
+            return new JSONObject(scanner.hasNext() ? scanner.next() : "");
+        } finally { con.disconnect(); }
+    }
 
     /** Main city per time zone: latitude, longitude. Zones not listed show no weather until a city is set. */
     private static final Map<String, float[]> ZONES = new HashMap<>();
@@ -57,56 +106,73 @@ final class Weather {
 
     private final Handler main = new Handler(Looper.getMainLooper());
     private final Listener listener;
-    private boolean fahrenheit;
-    private long fetchedAt;
+    private final Prefs prefs;
+    private String configuration;
+    private long nextFetch;
+    private int generation;
+    private boolean fetching;
 
-    Weather(boolean fahrenheit, Listener listener) {
-        this.fahrenheit = fahrenheit;
+    Weather(Prefs prefs, Listener listener) {
+        this.prefs = prefs;
         this.listener = listener;
     }
 
     boolean ready() { return temp != Integer.MIN_VALUE; }
 
-    /** Switches units; refetches right away if they changed. */
-    void setFahrenheit(boolean f) {
-        if (f == fahrenheit) return;
-        fahrenheit = f;
-        temp = Integer.MIN_VALUE;
-        fetchedAt = 0;
-        refresh();
-    }
-
-    /** Fetches if the last reading is older than 30 minutes. */
+    /** Main-thread entry point. A changed city or unit invalidates any older in-flight response. */
     void refresh() {
-        if (System.currentTimeMillis() - fetchedAt < 30 * 60_000L) return;
-        float[] at = ZONES.get(TimeZone.getDefault().getID());
-        if (at == null) return;
-        fetchedAt = System.currentTimeMillis();
+        Place city = prefs.city();
+        String unit = prefs.get(Prefs.UNITS);
+        final boolean fahrenheit = "f".equals(unit) || ("auto".equals(unit) && AppStore.usesFahrenheit());
+        float[] zone = ZONES.get(TimeZone.getDefault().getID());
+        String config = (city == null ? TimeZone.getDefault().getID() : city.json().toString()) + ":" + fahrenheit;
+        if (!config.equals(configuration)) {
+            configuration = config;
+            generation++;
+            fetching = false;
+            temp = Integer.MIN_VALUE;
+            nextFetch = 0;
+            listener.onWeather();
+        }
+        if (city == null && zone == null) return;
+        long now = SystemClock.elapsedRealtime();
+        if (fetching || now < nextFetch) return;
+        final double lat = city == null ? zone[0] : city.latitude, lon = city == null ? zone[1] : city.longitude;
+        final int requestGeneration = generation;
+        fetching = true;
         new Thread(() -> {
             try {
-                String url = "https://api.open-meteo.com/v1/forecast?latitude=" + at[0] + "&longitude=" + at[1]
+                JSONObject j = request("https://api.open-meteo.com/v1/forecast?latitude=" + lat + "&longitude=" + lon
                         + "&current=temperature_2m,weather_code,is_day&daily=temperature_2m_max,temperature_2m_min&forecast_days=1"
-                        + "&timezone=auto&temperature_unit=" + (fahrenheit ? "fahrenheit" : "celsius");
-                HttpURLConnection con = (HttpURLConnection) new URL(url).openConnection();
-                con.setConnectTimeout(8000);
-                con.setReadTimeout(8000);
-                String body;
-                try (InputStream in = con.getInputStream(); Scanner s = new Scanner(in, "UTF-8").useDelimiter("\\A")) {
-                    body = s.hasNext() ? s.next() : "";
-                } finally { con.disconnect(); }
-                JSONObject j = new JSONObject(body), cur = j.getJSONObject("current"), d = j.getJSONObject("daily");
+                        + "&timezone=auto&temperature_unit=" + (fahrenheit ? "fahrenheit" : "celsius"));
+                JSONObject cur = j.getJSONObject("current"), d = j.getJSONObject("daily");
                 int code = cur.getInt("weather_code");
                 boolean day = cur.optInt("is_day", 1) == 1;
-                high = (int) Math.round(d.getJSONArray("temperature_2m_max").getDouble(0));
-                low = (int) Math.round(d.getJSONArray("temperature_2m_min").getDouble(0));
-                kind = kindOf(code, day);
-                description = describe(code);
-                temp = (int) Math.round(cur.getDouble("temperature_2m"));
-                main.post(listener::onWeather);
+                int hi = rounded(d.getJSONArray("temperature_2m_max").getDouble(0));
+                int lo = rounded(d.getJSONArray("temperature_2m_min").getDouble(0));
+                int temperature = rounded(cur.getDouble("temperature_2m"));
+                main.post(() -> {
+                    if (requestGeneration != generation) return;
+                    high = hi; low = lo; kind = kindOf(code, day); description = describe(code); temp = temperature;
+                    fetching = false;
+                    nextFetch = SystemClock.elapsedRealtime() + 30 * 60_000L;
+                    listener.onWeather();
+                });
             } catch (Exception e) {
-                fetchedAt = System.currentTimeMillis() - 25 * 60_000L;  // try again in ~5 minutes
+                main.post(() -> {
+                    if (requestGeneration != generation) return;
+                    fetching = false;
+                    temp = Integer.MIN_VALUE;
+                    nextFetch = SystemClock.elapsedRealtime() + 5 * 60_000L;
+                    listener.onWeather();
+                });
             }
         }, "weather").start();
+    }
+
+    private static int rounded(double value) {
+        if (!Double.isFinite(value)) throw new IllegalArgumentException("missing temperature");
+        return (int) Math.round(value);
     }
 
     /** WMO weather codes, as Open-Meteo reports them. */

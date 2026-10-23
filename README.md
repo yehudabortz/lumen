@@ -22,6 +22,12 @@ sdkmanager "build-tools;35.0.0" "platforms;android-34"
 ./build.sh
 ```
 
+**NASA photos need no setup:** choose **Settings → Appearance → Background → NASA photos**. The screensaver
+also offers NASA photos. Lumen searches NASA's live image library at each rotation and downloads a result into a
+small shared cache, with title and attribution on screen. Downloads and decoding happen in the background; no key
+or account is needed. The last good image stays visible offline.
+See [photo credits and sources](docs/NASA-PHOTOS.md).
+
 Optional: to let the background and screensaver use Unsplash photos, create a free app at
 [unsplash.com/developers](https://unsplash.com/developers) and add its access key to `local.properties`
 (git-ignored) before building:
@@ -50,12 +56,17 @@ to read TV listings: that's what fills the Top Shelf with your apps' "continue w
 ## Status
 
 Working on a real TV: landscapes with time-of-day lighting (or Unsplash photos), weather and clock, the glass dock,
-the Top Shelf from your apps' Watch Next and channels, All Apps, the tile menu (long-press OK), settings as a dropdown
-from the status bar (Up to the clock, then OK), and the screensaver. To make Lumen the screensaver on Google TV, where
+Top Picks for You mixing Watch Next and recommendations across apps, All Apps, the tile menu (long-press OK),
+settings as a dropdown from the status bar (Up to the clock, then OK), and the screensaver (Back from the home dock).
+To make Lumen the screensaver on Google TV, where
 third-party screensavers are hidden from Settings:
 
 ```sh
 adb shell settings put secure screensaver_components dev.lumen.tv/.Screensaver
 ```
+
+For local weather, open **Settings → Clock & Weather → Location**, search for a city or postal code, and
+choose the matching city. Home and the screensaver use the same saved location. Until you choose one, weather
+uses an approximate city from the TV’s time zone. No location permission or API key is required.
 
 Still to come: cinematic mode, tile sizes and the Inter typeface.

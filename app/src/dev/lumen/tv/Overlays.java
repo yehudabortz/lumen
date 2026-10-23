@@ -30,6 +30,7 @@ final class Overlays {
         void unhide(String pkg);
         void appInfo(AppStore.App a);
         void changed(String key);  // a setting changed: apply it now
+        void chooseLocation();
         void panelOpened();        // focus moves to the clock-and-weather pill the dropdown hangs from
         String weatherLine();      // "Partly cloudy · 62° · H 68° L 51°", or null
         String weatherKind();
@@ -78,6 +79,7 @@ final class Overlays {
     private int rowI;
 
     private final Paint fill = new Paint(Paint.ANTI_ALIAS_FLAG), stroke = new Paint(Paint.ANTI_ALIAS_FLAG), glass = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
+    private final android.text.TextPaint ellipsizeP = new android.text.TextPaint();
     private final Paint titleP, nameP, subP, rowP, valueP, headP, noteP;
     private final RectF pillRect = new RectF(), r = new RectF(), src = new RectF(), screen = new RectF(0, 0, Ui.W, Ui.H);
     private final Matrix m = new Matrix();
@@ -179,7 +181,16 @@ final class Overlays {
         }
     }
 
+    void locationChanged() {
+        for (Row row : rows) if (Prefs.PAGE_LOCATION.equals(row.key)) row.value = pageSummary(row.key);
+        host.redraw();
+    }
+
     private String pageSummary(String key) {
+        if (Prefs.PAGE_LOCATION.equals(key)) {
+            Weather.Place city = host.prefs().city();
+            return city == null ? "Time zone (approx.)" : city.name;
+        }
         if (Prefs.PAGE_HIDDEN.equals(key)) {
             int n = host.apps().hidden.size();
             return n == 0 ? "None" : n + " hidden";
@@ -222,7 +233,10 @@ final class Overlays {
         if (mode != PANEL || rows.isEmpty()) return;
         Row row = rows.get(rowI);
         if (row.kind == CHOICE) side(1);
-        else if (row.kind == PAGE) goPage(row.key);
+        else if (row.kind == PAGE) {
+            if (Prefs.PAGE_LOCATION.equals(row.key)) host.chooseLocation();
+            else goPage(row.key);
+        }
         else if (row.kind == TOGGLE) toggle(row);
     }
 
@@ -442,6 +456,10 @@ final class Overlays {
             String v = row.value == null ? "" : row.value;
             if (row.kind == CHOICE && f > .5f) v = "‹  " + v + "  ›";
             else if (row.kind == PAGE) v = v + "  ›";
+            float valueWidth = w - 2 * IN - rowP.measureText(row.label) - 24;
+            ellipsizeP.set(valueP);
+            v = android.text.TextUtils.ellipsize(v, ellipsizeP,
+                    Math.max(0, valueWidth), android.text.TextUtils.TruncateAt.END).toString();
             c.drawText(v, right - IN, baseline(valueP, ry, ROW), valueP);
         }
         c.restore();

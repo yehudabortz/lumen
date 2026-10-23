@@ -10,6 +10,8 @@ import android.graphics.ColorMatrixColorFilter;
 import android.graphics.LinearGradient;
 import android.graphics.Matrix;
 import android.graphics.Paint;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffXfermode;
 import android.graphics.RadialGradient;
 import android.graphics.RectF;
 import android.graphics.Shader;
@@ -34,6 +36,8 @@ final class HomeView extends View implements Overlays.Host {
         void open(ShelfStore.Item item, AppStore.App fallback);
         void appInfo(String pkg);
         void reloadApps();
+        void chooseLocation(Runnable changed);
+        void screensaver();
     }
 
     // ---- Layout (design px) ----
@@ -93,6 +97,10 @@ final class HomeView extends View implements Overlays.Host {
     private final LinearGradient dockTintU = new LinearGradient(0, 0, 0, 1,
             new int[]{Color.argb(22, 255, 255, 255), Color.argb(9, 255, 255, 255), Color.argb(5, 255, 255, 255)}, new float[]{0, .5f, 1}, Shader.TileMode.CLAMP);
     private final LinearGradient dockSheenU = new LinearGradient(0, 0, 0, 1, Color.argb(18, 255, 255, 255), WHITE_0, Shader.TileMode.CLAMP);
+    private final LinearGradient scrollFade = new LinearGradient(0, 0, 0, 270,
+            new int[]{Color.argb(42, 255, 255, 255), Color.argb(26, 255, 255, 255), Color.argb(12, 255, 255, 255), 0},
+            new float[]{0, .38f, .7f, 1}, Shader.TileMode.CLAMP);
+    private final Paint scrollMask = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RadialGradient glowU = new RadialGradient(0, 0, 1, Color.WHITE, WHITE_0, Shader.TileMode.CLAMP);
 
     HomeView(Context c, Host host) {
@@ -135,11 +143,14 @@ final class HomeView extends View implements Overlays.Host {
         cardTitleP = Ui.text(Ui.bold, 30, Ui.TEXT, -.03f);
         toastP = Ui.text(Ui.medium, 22, Ui.TEXT, -.01f);
         toastP.setTextAlign(Paint.Align.CENTER);
+        scrollMask.setShader(new LinearGradient(0, 0, 0, 270,
+                new int[]{Color.WHITE, Color.WHITE, 0}, new float[]{0, .48f, 1}, Shader.TileMode.CLAMP));
+        scrollMask.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.DST_IN));
         for (Paint p : new Paint[]{clockP, dateP, headP, headAppP, titleP, metaP, labelP, labelDimP, nameP, cardTitleP}) p.setShadowLayer(14, 0, 2, Color.argb(90, 0, 0, 0));
 
         float px = c.getResources().getDisplayMetrics().widthPixels / Ui.W * 1.07f;  // card size on screen, focus zoom included
         art = new ArtCache(c, Math.round(CARD_W * px), Math.round(CARD_H * px), this::invalidate);
-        weather = new Weather(fahrenheit(), this::invalidate);
+        weather = new Weather(prefs, this::invalidate);
     }
 
     // ---------------------------------------------------------------- data
@@ -163,9 +174,9 @@ final class HomeView extends View implements Overlays.Host {
     /** Called every 30 s by the activity: clock, weather, and the scene when the time-of-day palette changes. */
     void tick() {
         if (prefs.is(Prefs.WEATHER, "on")) weather.refresh();
-        if (prefs.is(Prefs.BACKGROUND, "unsplash")) {
+        if (prefs.is(Prefs.BACKGROUND, "unsplash") || prefs.is(Prefs.BACKGROUND, "nasa")) {
             long every = prefs.is(Prefs.PHOTOS, "day") ? 24 * 3600_000L : 3600_000L;
-            if (SystemClock.uptimeMillis() - photoAt > every) renderScene();
+            if (SystemClock.uptimeMillis() - photoAt > (photoCredit == null ? 15 * 60_000L : every)) renderScene();
         } else if (wantedPalette() != palette) renderScene();
         invalidate();
     }
@@ -182,18 +193,10 @@ final class HomeView extends View implements Overlays.Host {
 
     private void refreshShelf() {
         if (shelfData == null) { shelf = null; return; }
-        AppStore.App f = focusedRowApp();
-        ShelfStore.Shelf next = shelfData.forApp(f == null ? null : f.pkg, f == null ? null : f.label, prefs.get(Prefs.SHELF), prefs.set(Prefs.SHELF_OFF));
+        java.util.Set<String> excluded = prefs.set(Prefs.SHELF_OFF);
+        excluded.addAll(prefs.set(Prefs.HIDDEN));
+        ShelfStore.Shelf next = shelfData.forHome(prefs.get(Prefs.SHELF), excluded);
         if (next != shelf) { shelf = next; cardI = 0; cardScroll.at(0); if (area == Area.SHELF && shelf == null) area = Area.ROW; }
-    }
-
-    private AppStore.App focusedRowApp() {
-        return apps == null || apps.row.isEmpty() ? null : apps.row.get(Math.min(rowI, apps.row.size() - 1));
-    }
-
-    private boolean fahrenheit() {
-        String u = prefs.get(Prefs.UNITS);
-        return "f".equals(u) || ("auto".equals(u) && AppStore.usesFahrenheit());
     }
 
     private boolean reduced() { return prefs.is(Prefs.MOTION, "reduced"); }
@@ -212,7 +215,7 @@ final class HomeView extends View implements Overlays.Host {
         if (getWidth() == 0) return;
         if (sceneBusy) { sceneAgain = true; return; }
         sceneBusy = true;
-        final int w = getWidth(), h = getHeight();
+        final int w = Math.min(1920, getWidth()), h = Math.round(w * getHeight() / (float) getWidth());
         final String k = prefs.get(Prefs.BACKGROUND);
         final Scene.Palette p = wantedPalette();
         final long every = prefs.is(Prefs.PHOTOS, "day") ? 24 * 3600_000L : 3600_000L;
@@ -220,6 +223,12 @@ final class HomeView extends View implements Overlays.Host {
             Bitmap sc = null;
             String credit = null;
             boolean bright;
+            if ("nasa".equals(k)) {
+                Nasa.Photo ph = Nasa.photo(getContext(), "home", w, h, every, () -> {
+                    if (isAttachedToWindow() && prefs.is(Prefs.BACKGROUND, "nasa")) renderScene();
+                });
+                if (ph != null) { sc = ph.bitmap; credit = ph.credit; }
+            }
             if ("unsplash".equals(k)) {  // the cached photo first; a fresh one when it's due
                 Unsplash.Photo ph = null;
                 if (Unsplash.age(getContext(), "home") > every) {
@@ -228,13 +237,18 @@ final class HomeView extends View implements Overlays.Host {
                 if (ph == null) ph = Unsplash.cached(getContext(), "home", w, h);
                 if (ph != null) { sc = ph.bitmap; credit = ph.credit; }
             }
-            if (sc == null) sc = Scene.render("unsplash".equals(k) ? "alpine" : k, p, 42, w, h);
+            if (sc == null) sc = Scene.render(("unsplash".equals(k) || "nasa".equals(k)) ? "alpine" : k, p, 42, w, h);
             Bitmap glass = Blur.blurred(sc, 240, 4), deep = Blur.blurred(sc, 120, 4);
             bright = credit != null ? luminance(deep) > .5f : Scene.isBright(p, k);
             legibility(sc, bright);
             final Bitmap fsc = sc;
             final String fcredit = credit;
             post(() -> {
+                if (!k.equals(prefs.get(Prefs.BACKGROUND))) {
+                    fsc.recycle(); glass.recycle(); deep.recycle();
+                    sceneBusy = false; sceneAgain = false; renderScene();
+                    return;
+                }
                 scene = fsc; glassBlur = glass; deepBlur = deep; palette = p; photoCredit = fcredit; sceneBusy = false;
                 photoAt = SystemClock.uptimeMillis();
                 shaders.clear();
@@ -266,8 +280,10 @@ final class HomeView extends View implements Overlays.Host {
                 return true;
         }
         if (overlays.isOpen()) {
-            if (code == KeyEvent.KEYCODE_BACK || code == KeyEvent.KEYCODE_ESCAPE) backEaten = true;
+            boolean backKey = code == KeyEvent.KEYCODE_BACK || code == KeyEvent.KEYCODE_ESCAPE;
+            if (backKey && down) backEaten = true;
             overlays.key(code, e);
+            if (backKey && !down && !overlays.isOpen()) backEaten = false;
             invalidate();
             return true;
         }
@@ -294,7 +310,7 @@ final class HomeView extends View implements Overlays.Host {
         } else if (area == Area.ROW) {
             if (dx != 0 && !row.isEmpty()) {
                 int n = Math.max(0, Math.min(row.size() - 1, rowI + dx));
-                if (n != rowI) { rowI = n; glint(row.get(rowI)); refreshShelf(); }
+                if (n != rowI) { rowI = n; glint(row.get(rowI)); }
             }
             if (dy < 0 && shelf != null && !shelf.items.isEmpty()) { area = Area.SHELF; cardI = 0; glint(shelf.items.get(0)); }
             else if (dy < 0) toStatus();
@@ -346,6 +362,7 @@ final class HomeView extends View implements Overlays.Host {
         if (moving) moving = false;
         else if (area == Area.STATUS) area = statusFrom == Area.STATUS ? Area.ROW : statusFrom;
         else if (area != Area.ROW && !(apps != null && apps.row.isEmpty())) { area = Area.ROW; appsS.target = 0; }
+        else { host.screensaver(); return; }
         invalidate();
     }
 
@@ -361,6 +378,13 @@ final class HomeView extends View implements Overlays.Host {
     @Override public void redraw() { invalidate(); }
 
     @Override public void panelOpened() { if (area != Area.STATUS) toStatus(); }
+
+    @Override public void chooseLocation() {
+        host.chooseLocation(() -> {
+            changed(Prefs.PAGE_LOCATION);
+            overlays.locationChanged();
+        });
+    }
 
     @Override public String weatherKind() { return weather.kind; }
 
@@ -422,7 +446,7 @@ final class HomeView extends View implements Overlays.Host {
         switch (key) {
             case Prefs.BACKGROUND: case Prefs.TIME_OF_DAY: case Prefs.PHOTOS: renderScene(); break;
             case Prefs.SHELF: case Prefs.SHELF_OFF: refreshShelf(); break;
-            case Prefs.UNITS: weather.setFahrenheit(fahrenheit()); break;
+            case Prefs.UNITS: case Prefs.PAGE_LOCATION: weather.refresh(); break;
             case Prefs.WEATHER: if (prefs.is(Prefs.WEATHER, "on")) weather.refresh(); break;
             case Prefs.CLOCK: clockMinute = -1; break;
         }
@@ -452,7 +476,6 @@ final class HomeView extends View implements Overlays.Host {
 
     private void drawHome(Canvas c, long now) {
         drawBackground(c);
-        drawTopBar(c);
         float appsT = Ui.clamp(appsS.x, 0, 1), pageY = -APPS_SHIFT * appsT;
         c.save();
         c.translate(0, pageY);
@@ -460,8 +483,27 @@ final class HomeView extends View implements Overlays.Host {
         drawDock(c, pageY, appsT);
         if (appsT > 0.001f) drawGrid(c, appsT);
         c.restore();
+        drawScrollingTopOverlay(c, appsT);
+        drawTopBar(c);
         if (!overlays.visible()) drawHint(c, now, appsT);
         drawCredit(c, appsT);
+    }
+
+    /** A pre-blurred glass fade keeps the clock and date above the dock as All Apps scrolls underneath. */
+    private void drawScrollingTopOverlay(Canvas c, float progress) {
+        if (progress <= .001f || deepBlur == null) return;
+        screenRect.set(0, 0, Ui.W, Ui.H);
+        int layer = c.saveLayer(0, 0, Ui.W, 270, null);
+        bmp.setAlpha(Math.round(215 * progress));
+        c.drawBitmap(deepBlur, null, screenRect, bmp);
+        c.drawRect(0, 0, Ui.W, 270, scrollMask);
+        c.restoreToCount(layer);
+        bmp.setAlpha(255);
+        fill.setShader(scrollFade);
+        fill.setAlpha(Math.round(255 * progress));
+        c.drawRect(0, 0, Ui.W, 270, fill);
+        fill.setShader(null);
+        fill.setAlpha(255);
     }
 
     /** Advances every spring; returns true while anything is still moving. */
@@ -621,18 +663,26 @@ final class HomeView extends View implements Overlays.Host {
         int a = Math.round(255 * alpha);
         headP.setAlpha(Math.round(Color.alpha(Ui.TEXT) * alpha));
         headAppP.setAlpha(Math.round(Color.alpha(Ui.TEXT_2) * alpha));
-        String suffix = shelf.app != null ? " · " + shelf.app : " · from your apps";
-        c.drawText(shelf.heading, LEFT, SHELF_TOP + 25, headP);
-        c.drawText(suffix, LEFT + headP.measureText(shelf.heading), SHELF_TOP + 25, headAppP);
+        float left = shelfLeft();
+        String suffix = shelf.app != null ? " · " + shelf.app : " · across your apps";
+        c.drawText(shelf.heading, left, SHELF_TOP + 25, headP);
+        c.drawText(suffix, left + headP.measureText(shelf.heading), SHELF_TOP + 25, headAppP);
         // the focused card draws last, so its shadow lies over its neighbours
         int focusedIdx = area == Area.SHELF ? cardI : -1;
         for (int i = 0; i < shelf.items.size(); i++) {
             if (i == focusedIdx) continue;
-            float x = LEFT + i * (CARD_W + GAP) - cardScroll.x;
+            float x = left + i * (CARD_W + GAP) - cardScroll.x;
             if (x > Ui.W + 40 || x + CARD_W < -40) continue;
             drawCard(c, shelf.items.get(i), x, CARD_TOP, a);
         }
-        if (focusedIdx >= 0) drawCard(c, shelf.items.get(focusedIdx), LEFT + focusedIdx * (CARD_W + GAP) - cardScroll.x, CARD_TOP, a);
+        if (focusedIdx >= 0) drawCard(c, shelf.items.get(focusedIdx), left + focusedIdx * (CARD_W + GAP) - cardScroll.x, CARD_TOP, a);
+    }
+
+    /** The first recommendation card shares the first favorite tile's leading edge. */
+    private float shelfLeft() {
+        int n = apps == null ? 1 : Math.max(1, Math.min(apps.row.size(), (int) ROW_MAX));
+        float width = n * TILE_W + (n - 1) * GAP + 2 * PAD;
+        return (Ui.W - width) / 2 + PAD;
     }
 
     private void drawCard(Canvas c, ShelfStore.Item it, float x, float y, int alpha) {
@@ -652,6 +702,19 @@ final class HomeView extends View implements Overlays.Host {
             c.clipRect(r);
             c.drawText(ellipsize(it.title, cardTitleP, w - 44), r.left + 22, r.bottom - (it.progress > 0 ? 34 : 22), cardTitleP);
             c.restore();
+        }
+        if (it.appName != null && !it.appName.isEmpty()) {
+            metaP.setTextSize(17);
+            float badgeW = Math.min(CARD_W - 28, metaP.measureText(it.appName) + 22);
+            r.set(x + 14, y + 14, x + 14 + badgeW, y + 43);
+            fill.setShader(null);
+            fill.setColor(Color.argb(Math.round(164 * alpha / 255f), 12, 14, 20));
+            rrect(c, r, 10, fill);
+            metaP.setColor(Color.WHITE);
+            metaP.setAlpha(alpha);
+            c.drawText(ellipsize(it.appName, metaP, badgeW - 16), x + 22, y + 34, metaP);
+            metaP.setTextSize(20);
+            r.set(cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2);
         }
         tileFinish(c, r, R_TILE * sc, f, it, alpha);
         if (it.progress > 0) {

@@ -34,6 +34,10 @@
   .layer > svg { width: 100%; height: 100%; display: block; }
   #bg { transition: filter 420ms var(--ease), transform 420ms var(--ease), opacity 500ms var(--ease); }
   .stage.apps #bg { filter: blur(64px) saturate(1.3) brightness(.5); transform: scale(1.12); }
+  .scroll-glass { position: absolute; inset: 0 0 auto; height: 270px; z-index: 4; pointer-events: none; opacity: 0;
+    background: linear-gradient(180deg, rgba(32,36,48,.34), rgba(32,36,48,.22) 38%, rgba(32,36,48,.12) 70%, transparent);
+    backdrop-filter: blur(24px) saturate(1.3); -webkit-backdrop-filter: blur(24px) saturate(1.3); transition: opacity 260ms; }
+  .stage.apps .scroll-glass { opacity: 1; }
   #art { opacity: 0; transition: opacity 500ms var(--ease); }
   #art::after { content: ""; position: absolute; inset: 0;
      background: linear-gradient(90deg, rgba(0,0,0,.72) 0%, rgba(0,0,0,.38) 38%, rgba(0,0,0,0) 62%),
@@ -257,6 +261,7 @@
       <div class="apps-head">All Apps</div>
       <div class="grid" id="grid"></div>
     </div>
+    <div class="scroll-glass"></div>
     <div class="hint" id="hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>All Apps</div>
     <div class="scrim" id="scrim"></div>
     <div class="pill glass dark" id="pill"><span><kbd>◀ ▶</kbd>Move</span><span><kbd>OK</kbd>Done</span></div>
@@ -310,6 +315,8 @@ function trees(r, pts, hMin, hMax, every, edgesOnly = false) {
 }
 
 function scene(kind, palName, seed = 1, id = 's') {
+  if (kind === 'nasa photos') return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080"><image href="https://images-assets.nasa.gov/image/carina_nebula/carina_nebula~large.jpg" width="1920" height="1080" preserveAspectRatio="xMidYMid slice"/><text x="1824" y="1042" text-anchor="end" fill="white" opacity=".65" font-family="sans-serif" font-size="17">Cosmic Cliffs in the Carina Nebula · NASA / ESA / CSA / STScI</text></svg>`;
+  if (kind === 'unsplash') kind = 'alpine';
   const p = PAL[palName], r = rng(seed);
   const sx = p.sx * W, sy = p.sy * H;
   let defs = `<linearGradient id="${id}sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${p.top}"/><stop offset=".55" stop-color="${p.mid}"/><stop offset="1" stop-color="${p.low}"/></linearGradient>
@@ -438,18 +445,22 @@ const CONTENT = {
     T('Ultraviolet', 'Kino+', 'alpine', 'violet', 33, 'Film · 1 h 52 min', 0),
     T('North of Here', 'Kino+', 'forest', 'night', 35, 'Film · 1 h 40 min', 0) ] },
 };
-const UPNEXT = { title: 'Up Next', items: [CONTENT.Northfilm.items[0], CONTENT.Streamly.items[0], CONTENT.Tidewave.items[0], CONTENT.Streamly.items[1]] };
+const UPNEXT = { title: 'Continue Watching', items: [CONTENT.Northfilm.items[0], CONTENT.Streamly.items[0], CONTENT.Tidewave.items[0], CONTENT.Streamly.items[1]] };
+const TOP_PICKS = { title: 'Top Picks for You', items: [
+  CONTENT.Northfilm.items[0], CONTENT['Kino+'].items[0], CONTENT.Streamly.items[0], CONTENT['Kino+'].items[1],
+  CONTENT.Tidewave.items[0], CONTENT.Streamly.items[1], CONTENT['Kino+'].items[2], CONTENT.Northfilm.items[1]
+] };
 
 /* ---------- State ---------- */
 const prefs = { Background: 'Alpine', 'Follow time of day': 'On', Motion: 'Full',
-  'Top Shelf': 'Rich', 'Cinematic artwork': 'On',
+  'Top Shelf': 'Top Picks for You', 'Cinematic artwork': 'On',
   'Tile size': 'Medium', Labels: 'On focus', Clock: 'System', 'Show date': 'Off', Weather: 'On', Units: 'Auto',
-  Screensaver: 'Unsplash photos', 'Screensaver info': 'Clock & weather' };
+  Screensaver: 'NASA photos', 'Screensaver info': 'Clock & weather' };
 const OPTIONS = [
-  ['Appearance', 'Background', ['Alpine', 'Forest', 'Dunes', 'Coast', 'Unsplash', 'Graphite', 'Black']],
+  ['Appearance', 'Background', ['Alpine', 'Forest', 'Dunes', 'Coast', 'NASA photos', 'Unsplash', 'Graphite', 'Black']],
   ['Appearance', 'Follow time of day', ['On', 'Off']],
   ['Appearance', 'Motion', ['Full', 'Reduced']],
-  ['Top Shelf', 'Top Shelf', ['Rich', 'Up Next only', 'Off']],
+  ['Top Shelf', 'Top Shelf', ['Top Picks for You', 'Continue Watching', 'Off']],
   ['Top Shelf', 'Cinematic artwork', ['On', 'Off']],
   ['Top Shelf', 'Apps in Top Shelf', ['All']],
   ['Top Row', 'Tile size', ['Small', 'Medium', 'Large']],
@@ -457,9 +468,9 @@ const OPTIONS = [
   ['Clock & Weather', 'Clock', ['System', '12-hour', '24-hour', 'Off']],
   ['Clock & Weather', 'Show date', ['Off', 'On']],
   ['Clock & Weather', 'Weather', ['On', 'Off']],
-  ['Clock & Weather', 'Location', ['Automatic']],
+  ['Clock & Weather', 'Location', ['Time zone (approx.)']],
   ['Clock & Weather', 'Units', ['Auto', '°F', '°C']],
-  ['Screensaver', 'Screensaver', ['Unsplash photos', 'Landscape', 'Black']],
+  ['Screensaver', 'Screensaver', ['NASA photos', 'Unsplash photos', 'Landscape', 'Black']],
   ['Screensaver', 'Screensaver info', ['Clock & weather', 'Clock', 'None']],
   ['Apps', 'Hidden apps', ['None']],
 ];
@@ -481,9 +492,8 @@ const rowApps = () => topRow.map(i => APPS[i]);
 const gridApps = () => APPS.filter((_, i) => !topRow.includes(i));
 function shelfFor() {
   if (prefs['Top Shelf'] === 'Off') return null;
-  if (prefs['Top Shelf'] === 'Up Next only') return UPNEXT;
-  const app = rowApps()[s.view === 'shelf' ? s.shelfApp : s.i];
-  return (app && CONTENT[app.name]) || UPNEXT;
+  if (prefs['Top Shelf'] === 'Continue Watching') return UPNEXT;
+  return TOP_PICKS;
 }
 function cardHTML(it, focused, showBadge, idx) {
   const app = APPS.find(a => a.name === it.app);
@@ -528,9 +538,9 @@ function render() {
   // Top Shelf
   const sh = shelfFor(), shelfEl = $('shelf');
   if (sh) {
-    const isUp = sh === UPNEXT, left = 185;
-    const head = isUp ? `Up Next <span>· from your apps</span>` : sh.title.replace(/^Continue in (.+)$/, 'Continue Watching <span>· $1</span>').replace(/^Recommended in (.+)$/, 'Recommended <span>· $1</span>');
-    shelfEl.innerHTML = `<h4 style="left:${left}px">${head}</h4><div class="cards" style="left:${left}px">${sh.items.map((it, i) => cardHTML(it, s.view === 'shelf' && i === s.card, isUp, i)).join('')}</div>`;
+    const left = dockL + pad;
+    const head = `${sh.title} <span>· across your apps</span>`;
+    shelfEl.innerHTML = `<h4 style="left:${left}px">${head}</h4><div class="cards" style="left:${left}px">${sh.items.map((it, i) => cardHTML(it, s.view === 'shelf' && i === s.card, true, i)).join('')}</div>`;
   } else shelfEl.innerHTML = '';
 
   // Cinematic: the focused card's artwork becomes the backdrop
@@ -563,7 +573,7 @@ function renderSaver(t, kind) {
   const el = $('saver'); el.classList.toggle('on', s.saver);
   if (!s.saver) return;
   const now = new Date(), [ic, f, desc] = WX[t];
-  const sceneKind = kind === 'graphite' || kind === 'black' ? 'alpine' : kind;
+  const sceneKind = prefs.Screensaver === 'NASA photos' ? 'nasa photos' : kind === 'graphite' || kind === 'black' || kind === 'nasa photos' ? 'alpine' : kind;
   const sc = prefs.Screensaver === 'Black' ? '' : cachedScene(sceneKind, t, 77, 'sv');
   const info = prefs['Screensaver info'];
   const wx = info === 'Clock & weather' && prefs.Weather === 'On' ? `<div class="sep"></div>${wxIcon(ic)}<span>${temp(f)} · ${desc}</span>` : '';
@@ -644,7 +654,7 @@ function move(dx, dy) {
 }
 function ok() {
   if (s.saver) { s.saver = false; return render(); }
-  if (s.panel) { if (!SUBMENU.has(OPTIONS[s.panel.i][1])) move(1, 0); else toast(OPTIONS[s.panel.i][1]); return; }
+  if (s.panel) { if (!SUBMENU.has(OPTIONS[s.panel.i][1])) move(1, 0); else toast(OPTIONS[s.panel.i][1] === 'Location' ? 'Search city or postal code · choose a match on TV' : OPTIONS[s.panel.i][1]); return; }
   if (s.sheet) {
     const [label] = SHEET_ITEMS()[s.sheet.i]; s.sheet = null;
     if (label === 'Move') { if (s.area === 'row') s.moving = true; else toast('Add to Top Row first'); }
@@ -664,6 +674,8 @@ function back() {
   if (s.saver) s.saver = false; else if (s.sheet) s.sheet = null; else if (s.panel) s.panel = null; else if (s.moving) s.moving = false;
   else if (s.view === 'shelf') { s.view = 'home'; s.area = 'row'; s.i = s.shelfApp; }
   else if (s.view === 'apps') { s.view = 'home'; s.area = 'row'; s.i = 0; }
+  else if (s.area === 'status') s.area = 'row';
+  else if (s.view === 'home') s.saver = true;
   render();
 }
 document.addEventListener('keydown', e => {

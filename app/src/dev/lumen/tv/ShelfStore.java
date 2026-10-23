@@ -10,9 +10,11 @@ import android.net.Uri;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * The Top Shelf's content, read from Android TV's own provider (TvContract): each app's Watch Next items
@@ -23,7 +25,7 @@ final class ShelfStore {
     static final String PERMISSION = "android.permission.READ_TV_LISTINGS";
 
     static final class Item {
-        String pkg, title, line, intentUri;
+        String pkg, appName, title, line, intentUri;
         Uri art;
         float progress;       // 0..1, or 0 when there's nothing to resume
         long engaged;         // last engagement, for ordering
@@ -39,6 +41,8 @@ final class ShelfStore {
 
     /** Watch Next for every app, newest first: continue, then next episode, then watchlist. */
     final List<Item> upNext = new ArrayList<>();
+    /** Preview-channel suggestions in provider order. */
+    final List<Item> recommendations = new ArrayList<>();
     /** Per package: its Watch Next items, then its preview programs. */
     final Map<String, List<Item>> byApp = new HashMap<>();
 
@@ -48,6 +52,7 @@ final class ShelfStore {
 
     ShelfStore load(Context c) {
         upNext.clear();
+        recommendations.clear();
         byApp.clear();
         if (!allowed(c)) return this;
         ContentResolver cr = c.getContentResolver();
@@ -57,25 +62,76 @@ final class ShelfStore {
         for (Item it : next) list(it.pkg).add(it);
         for (Item it : query(cr, TvContract.PreviewPrograms.CONTENT_URI, false)) {
             List<Item> l = list(it.pkg);
-            if (l.size() < 16) l.add(it);
+            if (l.size() < 16) { l.add(it); recommendations.add(it); }
         }
+        labelApps(c, upNext);
+        labelApps(c, recommendations);
         return this;
     }
 
-    /**
-     * The shelf for the focused app, or Up Next across all apps when that app publishes nothing.
-     * mode is the Top Shelf setting (rich, upnext, off); apps in `off` never appear.
-     */
-    Shelf forApp(String pkg, String label, String mode, java.util.Set<String> off) {
+    /** One relevance-sorted, interleaved shelf across every app the user left enabled. */
+    Shelf forHome(String mode, Set<String> off) {
         if ("off".equals(mode)) return null;
-        List<Item> mine = pkg == null || "upnext".equals(mode) || off.contains(pkg) ? null : byApp.get(pkg);
-        if (mine != null && !mine.isEmpty()) {
-            boolean resume = mine.get(0).watchNext;
-            return new Shelf(resume ? "Continue Watching" : "Recommended", label, mine);
+        List<Item> active = new ArrayList<>(), otherWatchNext = new ArrayList<>(), suggested = new ArrayList<>();
+        for (Item it : upNext) if (!off.contains(it.pkg)) {
+            if (it.progress > 0) active.add(it); else otherWatchNext.add(it);
         }
-        List<Item> next = new ArrayList<>();
-        for (Item it : upNext) if (!off.contains(it.pkg)) next.add(it);
-        return next.isEmpty() ? null : new Shelf("Up Next", null, next);
+        List<Item> continuing = new ArrayList<>(active);
+        continuing.addAll(otherWatchNext);
+        if (!"upnext".equals(mode)) for (Item it : recommendations) if (!off.contains(it.pkg)) suggested.add(it);
+        List<Item> picks = new ArrayList<>();
+        Set<String> seen = new HashSet<>();
+        Map<String, List<Item>> bySource = new LinkedHashMap<>();
+        for (Item it : suggested) {
+            List<Item> source = bySource.get(it.pkg);
+            if (source == null) bySource.put(it.pkg, source = new ArrayList<>());
+            if (source.size() < 2) source.add(it);
+        }
+        List<List<Item>> sources = new ArrayList<>(bySource.values());
+        int[] sourceIndex = new int[sources.size()];
+        int nextIndex = 0, roundRobin = 0;
+        while (picks.size() < 24 && (nextIndex < continuing.size() || !sources.isEmpty())) {
+            if (nextIndex < continuing.size()) add(picks, seen, continuing.get(nextIndex++));
+            int source = -1, fallback = -1;
+            String lastPackage = picks.isEmpty() ? null : picks.get(picks.size() - 1).pkg;
+            for (int checked = 0; checked < sources.size(); checked++) {
+                int candidate = roundRobin++ % sources.size();
+                List<Item> items = sources.get(candidate);
+                if (sourceIndex[candidate] >= items.size()) continue;
+                if (fallback < 0) fallback = candidate;
+                if (lastPackage == null || !lastPackage.equals(items.get(sourceIndex[candidate]).pkg)) { source = candidate; break; }
+            }
+            if (source < 0) source = fallback;
+            if (source >= 0) add(picks, seen, sources.get(source).get(sourceIndex[source]++));
+            boolean hasMoreSuggestions = false;
+            for (int i = 0; i < sources.size(); i++) if (sourceIndex[i] < sources.get(i).size()) { hasMoreSuggestions = true; break; }
+            if (nextIndex >= continuing.size() && !hasMoreSuggestions) break;
+        }
+        if (picks.isEmpty()) return null;
+        return new Shelf("upnext".equals(mode) ? "Continue Watching" : "Top Picks for You", null, picks);
+    }
+
+    private static void add(List<Item> picks, Set<String> seen, Item it) {
+        String key = it.pkg + "\u0000" + (it.intentUri == null ? it.title : it.intentUri);
+        if (seen.add(key)) picks.add(it);
+    }
+
+    private static void labelApps(Context c, List<Item> items) {
+        Map<String, String> labels = new HashMap<>();
+        java.util.Iterator<Item> iterator = items.iterator();
+        while (iterator.hasNext()) {
+            Item it = iterator.next();
+            String label = labels.get(it.pkg);
+            if (label == null) {
+                try {
+                    android.content.pm.ApplicationInfo app = c.getPackageManager().getApplicationInfo(it.pkg, 0);
+                    if (!app.enabled) { iterator.remove(); continue; }
+                    label = c.getPackageManager().getApplicationLabel(app).toString();
+                } catch (Exception ignored) { iterator.remove(); continue; }
+                labels.put(it.pkg, label);
+            }
+            it.appName = label;
+        }
     }
 
     private List<Item> list(String pkg) {

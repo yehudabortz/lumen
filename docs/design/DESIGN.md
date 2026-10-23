@@ -3,7 +3,7 @@
 A calm, clean and minimal home screen for Android TV and Google TV: your apps on a glass dock, what you're watching
 from those apps, the time and the weather, over a landscape that follows the time of day. No ads, ever.
 
-Status: **design proposal**, not implemented yet. The interactive mockup is [`mockup.html`](mockup.html): open it in
+Status: **v0.3 implemented**, with cinematic mode, tile sizes and Inter still planned. The interactive mockup is [`mockup.html`](mockup.html): open it in
 a browser. The arrow keys act as the D-pad, Enter as OK (hold it for the tile menu), Esc as Back and S opens settings.
 
 ## Principles
@@ -21,18 +21,18 @@ a browser. The arrow keys act as the D-pad, Enter as OK (hold it for the tile me
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │                                                         ☀ 63°  │  2:48       │  weather · clock
 │                                                                              │
-│   Continue Watching · Northfilm                                              │  Top Shelf heading
+│   Top Picks for You · across your apps                                       │  Top Shelf heading
 │   ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐                        │
 │   │ artwork  │ │          │ │          │ │          │                        │  content cards
 │   │ ▬▬▬▬──── │ │          │ │          │ │          │                        │  (progress bar)
 │   └──────────┘ └──────────┘ └──────────┘ └──────────┘                        │
-│   S2 · E4 · 22 min left                                                      │
+│   Streamly · S2 · E4 · 22 min left                                          │  source app · progress
 │     ╭────────────────────────────────────────────────────────────────╮       │
 │     │ ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐                    │       │  glass dock (Top Row)
 │     │ │      │ │FOCUS │ │      │ │      │ │      │                    │       │
 │     │ └──────┘ └──────┘ └──────┘ └──────┘ └──────┘                    │       │
 │     ╰────────────────────────────────────────────────────────────────╯       │
-│                Northfilm                                                     │  focused app's name
+│                Northfilm                                                     │  focused favorite's name
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -41,24 +41,27 @@ a browser. The arrow keys act as the D-pad, Enter as OK (hold it for the tile me
 | Safe area | 96 px left/right, 64 px top/bottom (TV overscan); content aligns to x = 185 px |
 | Clock | Top-right, 40 px, Inter Medium, −2% tracking, tabular figures, 95% white. Optional date below, 21 px, 62% white |
 | Weather | Left of the clock, separated by a 1.5 px hairline: a color glyph (34 px) and the temperature, 30 px Medium, 62% white |
-| Top Shelf | Heading at y = 262 px: 25 px SemiBold, with the app's name after a dot in 62% white. Cards 376×211 px, radius 20, gap 28, then the episode/time line (21 px) |
+| Top Shelf | Heading at y = 262 px: **Top Picks for You**, 25 px SemiBold, then “across your apps” in 62% white. First card aligns to the first dock tile. Cards 376×211 px, radius 20, gap 28, with the source app and episode/time line |
 | Dock | Glass (see Materials), centered, bottom edge at 81% of screen height. Padding 22 px; radius 42 px = tile radius + padding, so the curves are concentric |
 | Tiles | 16:9, radius 20 px. Medium 288×162 px (default, five across), Small 232×130 (six), Large 376×211 (four) |
 | Focus | Scale 1.09 (cards 1.07) over 240 ms, deep soft shadow, a top-light sheen and one glint that sweeps across. The dock's specular highlight slides to sit above the focused tile |
 | Label | Focused tile only (default). 25 px SemiBold, 22 px under the dock |
-| Legibility | A dark vignette behind the clock and along the bottom, plus a soft band behind the shelf that strengthens on bright daytime scenes |
+| Legibility | A dark vignette behind the clock and along the bottom, plus a soft band behind the shelf that strengthens on bright daytime scenes. During the All Apps scroll, a pre-blurred gradient sits above the moving dock and below the clock/date |
 
 ## Screens
 
 1. **Home.** Scene, weather and clock, the Top Shelf, the dock. Focus starts on the dock.
-2. **Top Shelf.** It follows the focused app, as on a clean interface: *Continue Watching · Northfilm* shows that app's in-progress
-   items (with progress bars), then what that app recommends. If the focused app publishes nothing, the shelf shows
-   **Up Next**: in-progress items from all your apps, newest first, each with a small badge naming its app.
+2. **Top Shelf.** **Top Picks for You** mixes in-progress Watch Next items with recommendations from opted-in apps'
+   preview channels. In-progress items come first, then suggestions and additional Watch Next items are interleaved
+   across sources. Each card names its app; progress bars show where to resume. **Continue Watching** mode shows Watch Next
+   items across apps. Hidden apps and apps switched off in *Apps in Top Shelf* are excluded.
 3. **Cinematic.** Up from the dock moves focus into the shelf. The focused item's artwork fills the screen behind a
    dark gradient, with the app name, the title, year · rating · genre, a two-line synopsis and *Resume*/*Play*.
    The dock slides away and the cards settle at the bottom. Back or Down returns home.
-4. **All Apps.** Down from the dock: the shelf fades, the page scrolls up, the background blurs (64 px), saturates
-   and dims to half, and a five-column grid aligned with the dock's tiles appears.
+4. **All Apps.** Down from the dock: the shelf fades, the page scrolls up, and the dock passes behind a blurred,
+   fading glass gradient. The clock and date remain crisp above it. The background blurs (64 px), saturates and dims
+   to half, and a five-column grid aligned with the dock's tiles appears. Back returns to the dock; Back again
+   starts the screensaver.
 5. **Tile menu.** Long-press OK on a tile: *Move* · *Add to/Remove from Top Row* · *Show in Top Shelf* · *Hide* ·
    *App info* · *Home Screen Settings*. *Move* makes the tile wiggle; Left/Right moves it, OK drops it.
 6. **Status bar and settings.** Up from the shelf (or the dock) focuses the weather and clock: they sit in a quiet
@@ -80,7 +83,8 @@ server.
 - **Access.** With `READ_TV_LISTINGS` (a permission the user grants once from a prompt), a launcher can read every
   app's Watch Next items and preview programs marked searchable, which is the default. Without it Android shows only
   the launcher's own rows. Confirmed in the provider's source (`TvProvider.createSqlParams`).
-- **Up Next order:** *Continue* items first (by last engagement time), then *Next* (next episode), then *Watchlist*.
+- **Top Picks order:** in-progress Watch Next items (newest engagement first), then recommendations interleaved
+  across app sources, then other Watch Next items. **Continue Watching** mode uses only Watch Next records across all enabled apps.
 - **Opening an item** fires the program's intent URI, so it lands on that title inside its app.
 - **Per app:** every app can be turned off in *Apps in Top Shelf* or from its tile menu. Apps the user hid, or that
   are disabled, never appear.
@@ -93,10 +97,43 @@ server.
 
 - **Source:** [Open-Meteo](https://open-meteo.com): free, no key, no account. One request every 30 minutes while
   the TV is on (current temperature and condition, plus today's high and low for the screensaver).
-- **Location:** *Automatic* uses the TV's time zone to pick its main city, so no location permission is needed.
-  The user can set a city instead (typed once, geocoded once, stored on the TV).
+- **Location:** Settings → Clock & Weather → Location opens a city/postal-code search using Open-Meteo's
+  [geocoding API](https://open-meteo.com/en/docs/geocoding-api) (GeoNames data). A native TV keyboard accepts the
+  query, then a D-pad list shows matching cities with region and country; the user explicitly picks one. Search
+  runs only on submission. Empty results and network failures leave the previous city unchanged and allow retry.
+  The city and coordinates are stored only in private on-device preferences, shared by Home and the screensaver.
+  No location permission is needed. Until a city is set, **Time zone (approx.)** picks a main city for the TV's
+  time zone; this is an approximation, not device geolocation. **Use time zone** restores that fallback.
+- **Refresh:** selecting a city or changing units immediately clears the old reading and fetches again. Late
+  responses from an older city/unit choice are ignored. Home and the screensaver check every 30 seconds, with
+  successful forecasts reused for 30 minutes and failed requests retried after five minutes.
 - **Units:** follow the TV's region (°F in the US), or choose.
 - **Offline:** the weather simply disappears; nothing shows an error.
+
+## NASA photos (no key)
+
+Background and screensaver can use **NASA photos** from the public
+[NASA Image and Video Library](https://images.nasa.gov) search and asset APIs. No account, API key or new
+permission is needed. At each rotation Lumen searches for images, selects one of the returned results, and fetches
+its available JPEG rendition. It does not ship a predefined NASA image list. Title and photographer or NASA center
+are read from that result's metadata and shown on screen. See [NASA photo behavior](../NASA-PHOTOS.md).
+
+- **Home:** rotates hourly or daily using **New photo**. NASA is an appearance option; Alpine remains the default.
+- **Screensaver:** NASA photos are the default for new preferences, rotating every five minutes. Existing explicit
+  screensaver choices are preserved. Both views share the compressed disk cache, with separate rotation positions
+  persisted across restarts. Each picture shows its title and creator credit.
+- **Cache:** at most six JPEGs, 2 MiB each and 1920 × 1280, in private app cache storage (12 MiB plus one
+  2 MiB temporary file). A single background-priority worker makes a bounded search and image request only when
+  rotation is due. It atomically stores validated renditions. Failed requests retry after
+  15 minutes; the last good image stays visible offline.
+- **Startup/offline:** disk decoding and downloads never run on the UI thread. A drawn landscape appears immediately
+  on a cold cache, then the first downloaded photo replaces it. With cached photos, rotation works offline. Android
+  may evict the cache under storage pressure; it is rebuilt on later use.
+- **Memory/rendering:** image inputs are limited to 1920 × 1280; displayed backdrops are capped at 1920 pixels wide.
+  Bounds are checked before decode and smaller displays use sampled decoding. Home holds one photo and two small
+  blurred copies, with no added per-frame work. The dream holds at most two display bitmaps for a crossfade. Slow
+  drift redraws at about 30 fps; Reduced motion stops drift and redraws once a second outside fades. Clock/date
+  strings are formatted only when the minute or weather changes.
 
 ## Unsplash photos (optional)
 
@@ -179,11 +216,11 @@ Selected rows in menus are near-white pills (94%) with dark text, as on a clean 
 
 | Section | Option | Choices | Default |
 |---|---|---|---|
-| Appearance | Background | Alpine, Forest, Dunes, Coast, Unsplash (with a key), Graphite, Black | **Alpine** |
-| | New photo | Every hour / Every day (only with Unsplash) | **Every hour** |
+| Appearance | Background | Alpine, Forest, Dunes, Coast, NASA photos, Unsplash (with a key), Graphite, Black | **Alpine** |
+| | New photo | Every hour / Every day (only with photos) | **Every hour** |
 | | Follow time of day | On / Off | **On** |
 | | Motion | Full / Reduced (fades only; focus shown with an outline) | **Full** |
-| Top Shelf | Top Shelf | Rich (follows the focused app) / Up Next only / Off | **Rich** |
+| Top Shelf | Top Shelf | Top Picks for You / Continue Watching / Off | **Top Picks for You** |
 | | Cinematic artwork | On / Off (Off keeps the scene behind the hero text) | **On** |
 | | Apps in Top Shelf | Per-app toggles | all |
 | Top Row | Tile size | Small / Medium / Large | **Medium** |
@@ -192,9 +229,9 @@ Selected rows in menus are near-white pills (94%) with dark text, as on a clean 
 | Clock & Weather | Clock | System (12/24 h) / 12-hour / 24-hour / Off | **System** |
 | | Show date | On / Off | **Off** |
 | | Weather | On / Off | **On** |
-| | Location | Automatic (time zone) / a city | **Automatic** |
+| | Location | City/postal-code search / Time zone (approx.) | **Time zone (approx.)** |
 | | Units | Auto / °F / °C | **Auto** |
-| Screensaver | Screensaver | Unsplash photos (with a key) / Landscape / Black | **Unsplash photos**, else **Landscape** |
+| Screensaver | Screensaver | NASA photos / Unsplash photos (with a key) / Landscape / Black | **NASA photos** |
 | Apps | Hidden apps | List with toggles | none |
 | About | Version, source link, how to switch back to the original home screen | | |
 
@@ -222,6 +259,13 @@ Selected rows in menus are near-white pills (94%) with dark text, as on a clean 
   frame 12 ms (60 fps), 0.4% of frames over deadline while navigating. Shadows are nine-slice bitmaps (one per
   corner size, never regenerated while animating); motion uses damped springs. The backdrop and its legibility gradients are composited once per
   scene, and the glass dock is a single bitmap-shaded rounded rect, so a frame is one full-screen bitmap plus the UI.
+  NASA check (23 October 2026, same TV, paced dock navigation after a clean cached restart): 52,670 KB PSS versus
+  52,560 KB with the drawn background; median frame 20 ms versus 19 ms. Samples were about 250 frames each,
+  with three versus one missed deadlines; these short runs are indicative, not a long-duration benchmark.
+  The earlier fixed collection totaled 1,165,531 bytes. Live search now keeps a rolling cache capped at six
+  renditions, each at most 2 MiB. After live search was installed, one TV reading was 81,002 KB PSS with the
+  screensaver active and 72,018 KB after Home returned to foreground. These point samples include both activities
+  and are not a controlled comparison with the earlier clean-restart Home measurement.
 - **Nothing personal in the repo.** The TV's address and the signing key live in a git-ignored `local.properties`
   and `*.keystore`.
 

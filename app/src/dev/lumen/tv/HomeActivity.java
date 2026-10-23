@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.ComponentName;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.database.ContentObserver;
@@ -135,7 +136,17 @@ public final class HomeActivity extends Activity implements HomeView.Host {
         } catch (ActivityNotFoundException ignored) { }
     }
 
+    @Override public void chooseLocation(Runnable changed) {
+        new LocationPicker(this, new Prefs(this), changed).show();
+    }
+
     @Override public void reloadApps() { loadApps(); }
+
+    @Override public void screensaver() {
+        Intent i = new Intent().setComponent(new ComponentName("com.android.systemui", "com.android.systemui.Somnambulator"))
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        try { startActivity(i); } catch (ActivityNotFoundException | SecurityException ignored) { }
+    }
 
     @Override public void open(ShelfStore.Item item, AppStore.App fallback) {
         try {
