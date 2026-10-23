@@ -1,0 +1,42 @@
+#!/bin/sh
+# Builds out/Lumen.apk with the plain Android SDK tools: aapt2 -> javac -> d8 -> zipalign -> apksigner.
+# No Gradle and no libraries. Needs a JDK (17+) and the SDK's build-tools 35 and platform android-34.
+set -e
+cd "$(dirname "$0")"
+
+SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/opt/homebrew/share/android-commandlinetools}}"
+BT="$SDK/build-tools/35.0.0"
+JAR="$SDK/platforms/android-34/android.jar"
+[ -n "$JAVA_HOME" ] && export PATH="$JAVA_HOME/bin:$PATH"
+[ -x "/opt/homebrew/opt/openjdk@21/bin/javac" ] && export PATH="/opt/homebrew/opt/openjdk@21/bin:$PATH"
+for f in "$BT/aapt2" "$BT/d8" "$JAR"; do [ -e "$f" ] || { echo "Missing $f (see README: Building)"; exit 1; }; done
+
+VERSION_CODE=1
+VERSION_NAME=0.1
+
+rm -rf out && mkdir -p out/gen out/classes
+"$BT/aapt2" compile --dir app/res -o out/res.zip
+ASSETS=""; [ -d app/assets ] && ASSETS="-A app/assets"
+"$BT/aapt2" link -I "$JAR" --manifest app/AndroidManifest.xml $ASSETS out/res.zip \
+  --java out/gen --min-sdk-version 26 --target-sdk-version 34 \
+  --version-code $VERSION_CODE --version-name $VERSION_NAME -o out/unsigned.apk
+
+javac -nowarn -Xlint:-options -source 8 -target 8 -bootclasspath "$JAR:$BT/core-lambda-stubs.jar" -encoding UTF-8 -d out/classes \
+  $(find app/src out/gen -name '*.java')
+(cd out/classes && jar cf ../classes.jar .)
+"$BT/d8" --release --min-api 26 --lib "$JAR" --output out out/classes.jar
+(cd out && zip -q -j unsigned.apk classes.dex)
+
+# Signing key: created on first build, kept out of git (*.keystore, local.properties).
+if [ ! -f lumen.keystore ]; then
+  PASS=$(LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c 24)
+  keytool -genkeypair -keystore lumen.keystore -alias lumen -keyalg RSA -keysize 2048 -validity 10000 \
+    -storepass "$PASS" -keypass "$PASS" -dname "CN=Lumen" >/dev/null 2>&1
+  echo "keystore.password=$PASS" >> local.properties
+  echo "Created lumen.keystore. Keep it: updates must be signed with the same key."
+fi
+PASS=$(sed -n 's/^keystore.password=//p' local.properties)
+
+"$BT/zipalign" -f 4 out/unsigned.apk out/aligned.apk
+"$BT/apksigner" sign --ks lumen.keystore --ks-pass "pass:$PASS" --ks-key-alias lumen --out out/Lumen.apk out/aligned.apk
+echo "Built out/Lumen.apk ($(wc -c < out/Lumen.apk | tr -d ' ') bytes)"

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 16:9 launcher banner: a small dusk landscape. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="320dp" android:height="180dp" android:viewportWidth="320" android:viewportHeight="180">
+    <path android:fillColor="#1D2357" android:pathData="M0,0h320v180h-320z" />
+    <path android:fillColor="#5B3B79" android:pathData="M0,70h320v110h-320z" />
+    <path android:fillColor="#C0664C" android:pathData="M0,112h320v68h-320z" />
+    <path android:fillColor="#FFC88A" android:pathData="M228,108a18,18 0,1 1,-36 0a18,18 0,1 1,36 0z" />
+    <path android:fillColor="#3A2A4F" android:pathData="M0,128L46,92L80,112L128,70L170,110L214,86L262,116L320,96V180H0Z" />
+    <path android:fillColor="#140F24" android:pathData="M0,150L60,128L120,146L190,124L250,144L320,132V180H0Z" />
+</vector>

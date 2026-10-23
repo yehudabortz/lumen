@@ -1,0 +1,11 @@
+# Build output
+out/
+*.apk
+*.idx
+
+# Signing keys and machine-specific settings stay out of the repo
+*.keystore
+*.jks
+local.properties
+
+.DS_Store
