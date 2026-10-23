@@ -62,14 +62,20 @@ final class ShelfStore {
         return this;
     }
 
-    /** The shelf for the focused app, or Up Next across all apps when that app publishes nothing. */
-    Shelf forApp(String pkg, String label) {
-        List<Item> mine = pkg == null ? null : byApp.get(pkg);
+    /**
+     * The shelf for the focused app, or Up Next across all apps when that app publishes nothing.
+     * mode is the Top Shelf setting (rich, upnext, off); apps in `off` never appear.
+     */
+    Shelf forApp(String pkg, String label, String mode, java.util.Set<String> off) {
+        if ("off".equals(mode)) return null;
+        List<Item> mine = pkg == null || "upnext".equals(mode) || off.contains(pkg) ? null : byApp.get(pkg);
         if (mine != null && !mine.isEmpty()) {
             boolean resume = mine.get(0).watchNext;
             return new Shelf(resume ? "Continue Watching" : "Recommended", label, mine);
         }
-        return upNext.isEmpty() ? null : new Shelf("Up Next", null, upNext);
+        List<Item> next = new ArrayList<>();
+        for (Item it : upNext) if (!off.contains(it.pkg)) next.add(it);
+        return next.isEmpty() ? null : new Shelf("Up Next", null, next);
     }
 
     private List<Item> list(String pkg) {

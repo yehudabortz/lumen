@@ -11,6 +11,8 @@ import android.media.tv.TvContract;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.net.Uri;
+import android.provider.Settings;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.WindowManager;
@@ -126,6 +128,14 @@ public final class HomeActivity extends Activity implements HomeView.Host {
     @Override public void launch(AppStore.App app) {
         try { startActivity(app.launchIntent()); } catch (ActivityNotFoundException | SecurityException ignored) { }
     }
+
+    @Override public void appInfo(String pkg) {
+        try {
+            startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + pkg)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        } catch (ActivityNotFoundException ignored) { }
+    }
+
+    @Override public void reloadApps() { loadApps(); }
 
     @Override public void open(ShelfStore.Item item, AppStore.App fallback) {
         try {

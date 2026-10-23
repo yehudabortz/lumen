@@ -57,7 +57,7 @@ final class Weather {
 
     private final Handler main = new Handler(Looper.getMainLooper());
     private final Listener listener;
-    private final boolean fahrenheit;
+    private boolean fahrenheit;
     private long fetchedAt;
 
     Weather(boolean fahrenheit, Listener listener) {
@@ -66,6 +66,15 @@ final class Weather {
     }
 
     boolean ready() { return temp != Integer.MIN_VALUE; }
+
+    /** Switches units; refetches right away if they changed. */
+    void setFahrenheit(boolean f) {
+        if (f == fahrenheit) return;
+        fahrenheit = f;
+        temp = Integer.MIN_VALUE;
+        fetchedAt = 0;
+        refresh();
+    }
 
     /** Fetches if the last reading is older than 30 minutes. */
     void refresh() {

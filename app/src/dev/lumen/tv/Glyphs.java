@@ -74,4 +74,56 @@ final class Glyphs {
         c.drawCircle(cx + r * .12f, cy - r * .12f, r * .55f, fill);
         c.drawRoundRect(cx - r * .8f, cy + r * .05f, cx + r * .8f, cy + r * .55f, r * .25f, r * .25f, fill);
     }
+
+    /** Menu icons, stroked in the paint's current color, centered on (cx, cy) in a box of size `size`. */
+    static void menu(Canvas c, String name, float cx, float cy, float size, Paint stroke) {
+        float h = size / 2;
+        stroke.setShader(null);
+        stroke.setStyle(Paint.Style.STROKE);
+        stroke.setStrokeWidth(size * .075f);
+        stroke.setStrokeCap(Paint.Cap.ROUND);
+        stroke.setStrokeJoin(Paint.Join.ROUND);
+        Path p = new Path();
+        switch (name) {
+            case "move":
+                p.moveTo(cx - h * .8f, cy); p.lineTo(cx + h * .8f, cy);
+                p.moveTo(cx - h * .45f, cy - h * .35f); p.lineTo(cx - h * .8f, cy); p.lineTo(cx - h * .45f, cy + h * .35f);
+                p.moveTo(cx + h * .45f, cy - h * .35f); p.lineTo(cx + h * .8f, cy); p.lineTo(cx + h * .45f, cy + h * .35f);
+                break;
+            case "add":
+                p.moveTo(cx - h * .6f, cy); p.lineTo(cx + h * .6f, cy);
+                p.moveTo(cx, cy - h * .6f); p.lineTo(cx, cy + h * .6f);
+                break;
+            case "remove":
+                p.moveTo(cx - h * .6f, cy); p.lineTo(cx + h * .6f, cy);
+                break;
+            case "shelf":
+                p.addRoundRect(cx - h * .8f, cy - h * .65f, cx + h * .8f, cy + h * .25f, h * .15f, h * .15f, Path.Direction.CW);
+                p.moveTo(cx - h * .45f, cy + h * .65f); p.lineTo(cx + h * .45f, cy + h * .65f);
+                break;
+            case "hide":
+                p.moveTo(cx - h * .85f, cy);
+                p.quadTo(cx, cy - h * .9f, cx + h * .85f, cy);
+                p.quadTo(cx, cy + h * .9f, cx - h * .85f, cy);
+                p.addCircle(cx, cy, h * .25f, Path.Direction.CW);
+                p.moveTo(cx - h * .7f, cy - h * .7f); p.lineTo(cx + h * .7f, cy + h * .7f);
+                break;
+            case "info":
+                p.addCircle(cx, cy, h * .8f, Path.Direction.CW);
+                p.moveTo(cx, cy - h * .05f); p.lineTo(cx, cy + h * .4f);
+                p.moveTo(cx, cy - h * .38f); p.lineTo(cx, cy - h * .36f);
+                break;
+            default:  // gear
+                p.addCircle(cx, cy, h * .3f, Path.Direction.CW);
+                for (int i = 0; i < 8; i++) {
+                    double a = i * Math.PI / 4;
+                    float cs = (float) Math.cos(a), sn = (float) Math.sin(a);
+                    p.moveTo(cx + cs * h * .55f, cy + sn * h * .55f);
+                    p.lineTo(cx + cs * h * .82f, cy + sn * h * .82f);
+                }
+                p.addCircle(cx, cy, h * .55f, Path.Direction.CW);
+                break;
+        }
+        c.drawPath(p, stroke);
+    }
 }

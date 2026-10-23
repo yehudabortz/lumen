@@ -60,9 +60,12 @@ a browser. The arrow keys act as the D-pad, Enter as OK (hold it for the tile me
 4. **All Apps.** Down from the dock: the shelf fades, the page scrolls up, the background blurs (64 px), saturates
    and dims to half, and a five-column grid aligned with the dock's tiles appears.
 5. **Tile menu.** Long-press OK on a tile: *Move* · *Add to/Remove from Top Row* · *Show in Top Shelf* · *Hide* ·
-   *Home Screen Settings*. *Move* makes the tile wiggle; Left/Right moves it, OK drops it.
-6. **Settings.** A floating glass panel (36 px from the edges, radius 48 px) over the live home screen, so every
-   change previews instantly. It scrolls to keep the focused row in view.
+   *App info* · *Home Screen Settings*. *Move* makes the tile wiggle; Left/Right moves it, OK drops it.
+6. **Status bar and settings.** Up from the shelf (or the dock) focuses the weather and clock: they sit in a quiet
+   glass bar and a gear chip slides in at its end. The chip is the focused control (near-white, lifted, dark gear).
+   OK opens Settings as a compact dropdown 12 px below the bar, right edges aligned, as tall as its content, with
+   today's weather (condition, high, low) under the title. Changes preview live. There is no settings tile; the tile
+   menu and the remote's Menu key open the same dropdown.
 7. **Screensaver.** The same scene, full screen, drifting very slowly (a 90 s zoom-and-pan, back and forth), with
    a large clock (150 px SemiBold), the date and the weather at the bottom left. The text block moves to a new spot
    every few minutes so nothing burns into OLED panels. Any key wakes the TV straight back to Home.
@@ -95,6 +98,19 @@ server.
 - **Units:** follow the TV's region (°F in the US), or choose.
 - **Offline:** the weather simply disappears; nothing shows an error.
 
+## Unsplash photos (optional)
+
+Background and screensaver can use photos from [Unsplash](https://unsplash.com) instead of the drawn landscapes,
+through the official API: a random landscape photo for the query *desktop wallpaper*, with Unsplash's strict content
+filter. Following Unsplash's API guidelines, images are hotlinked from Unsplash's URLs, the photo's download
+endpoint is pinged when it's used, and "Photo by … on Unsplash" is shown small in a corner.
+
+- **Key:** each build needs its own free Unsplash access key, set as `unsplash.access_key=` in the git-ignored
+  `local.properties`. `build.sh` turns it into a generated class; without a key the Unsplash choices don't appear.
+- **Rate:** the home screen fetches a new photo every hour (or day); the screensaver every five minutes while it
+  runs. Both stay far below the 50 requests per hour of a new key.
+- **Offline:** the last photo is cached on the TV and shown until a new one arrives.
+
 ## Scenes (backgrounds)
 
 Landscapes drawn in code, so they cost no image files and no downloads and stay sharp at any resolution:
@@ -111,6 +127,23 @@ Each scene is lit by one of four palettes: **dawn**, **day**, **dusk**, **night*
 *Follow time of day* on, the palette changes with the clock, crossfading over a few minutes. Far ranges take on the
 horizon's color (atmospheric perspective); a 2% grain stops gradients from banding. The same scene generator makes
 the placeholder artwork in the mockup.
+
+## Geometry: corners and spacing
+
+Every rounded shape uses a **continuous corner** (the curvature eases in over 1.53 × the radius instead of
+jumping from straight to circular; see `Ui.squircle`). Capsules and circles keep true round ends.
+
+Radii are **concentric**: an inner radius is the outer radius minus the padding between them.
+
+| Container | Radius | Padding | Inner element | Inner radius |
+|---|---|---|---|---|
+| Dock | 42 | 22 | App tile | 20 |
+| Status bar (64 tall) | 32 | 6 | Gear chip (52) | 26 |
+| Settings dropdown, tile menu | 32 | 16 | Selection row (60 tall) | 16 |
+
+Spacing sits on an 8-pt grid, with shared insets so edges line up: text sits 24 inside any bar or selection row, so
+a menu's title, weather line, section headings, row labels and values all align 40 from its edges; a section heading
+has 24 above and 8 below; the status bar and dropdown share the 96 px safe margin.
 
 ## Typography
 
@@ -146,7 +179,8 @@ Selected rows in menus are near-white pills (94%) with dark text, as on a clean 
 
 | Section | Option | Choices | Default |
 |---|---|---|---|
-| Appearance | Background | Alpine, Forest, Dunes, Coast, Graphite, Black | **Alpine** |
+| Appearance | Background | Alpine, Forest, Dunes, Coast, Unsplash (with a key), Graphite, Black | **Alpine** |
+| | New photo | Every hour / Every day (only with Unsplash) | **Every hour** |
 | | Follow time of day | On / Off | **On** |
 | | Motion | Full / Reduced (fades only; focus shown with an outline) | **Full** |
 | Top Shelf | Top Shelf | Rich (follows the focused app) / Up Next only / Off | **Rich** |
@@ -160,8 +194,7 @@ Selected rows in menus are near-white pills (94%) with dark text, as on a clean 
 | | Weather | On / Off | **On** |
 | | Location | Automatic (time zone) / a city | **Automatic** |
 | | Units | Auto / °F / °C | **Auto** |
-| Screensaver | Screensaver | Landscape / Black / System default | **Landscape** |
-| | Screensaver info | Clock & weather / Clock / None | **Clock & weather** |
+| Screensaver | Screensaver | Unsplash photos (with a key) / Landscape / Black | **Unsplash photos**, else **Landscape** |
 | Apps | Hidden apps | List with toggles | none |
 | About | Version, source link, how to switch back to the original home screen | | |
 
@@ -185,8 +218,9 @@ Selected rows in menus are near-white pills (94%) with dark text, as on a clean 
 - **The screensaver** is a standard Android `DreamService`. Google TV hides third-party screensavers in its own
   settings, so setup sets it once with `settings put secure screensaver_components` (documented in the README).
 - **Memory target:** under 60 MB idle on Home. Artwork is decoded at card size; only the visible shelf is in memory.
-  First measurement on a 2022 Sony BRAVIA (3 GB RAM, Android 12): 63 MB PSS with a shelf of artwork loaded,
-  0.4% of frames over deadline while navigating. The backdrop and its legibility gradients are composited once per
+  Measured on a 2022 Sony BRAVIA (3 GB RAM, Android 12), v0.2: 54 MB PSS with a shelf of artwork loaded; median
+  frame 12 ms (60 fps), 0.4% of frames over deadline while navigating. Shadows are nine-slice bitmaps (one per
+  corner size, never regenerated while animating); motion uses damped springs. The backdrop and its legibility gradients are composited once per
   scene, and the glass dock is a single bitmap-shaded rounded rect, so a frame is one full-screen bitmap plus the UI.
 - **Nothing personal in the repo.** The TV's address and the signing key live in a git-ignored `local.properties`
   and `*.keystore`.
@@ -195,9 +229,9 @@ Selected rows in menus are near-white pills (94%) with dark text, as on a clean 
 
 | | |
 |---|---|
-| ![Home](screens/home.jpg) Home: Alpine at dusk, Northfilm's shelf | ![Up Next](screens/up-next.jpg) Up Next across apps (focused app has no shelf) |
-| ![Cinematic](screens/cinematic.jpg) Cinematic: focus in the shelf | ![Screensaver](screens/screensaver.jpg) Screensaver at night |
-| ![All Apps](screens/all-apps.jpg) All Apps | ![Tile menu](screens/tile-menu.jpg) Tile menu (long-press OK) |
-| ![Settings](screens/settings.jpg) Settings over the live home screen | ![Forest by day](screens/forest-day.jpg) Forest by day |
-| ![Dunes at dawn](screens/dunes-dawn.jpg) Dunes at dawn, Up Next | ![Coast at night](screens/coast-night.jpg) Coast at night, date on |
-| ![Quiet](screens/quiet.jpg) Quiet: Black, Top Shelf off | |
+| ![Home](screens/home.jpg) Home: Alpine at dusk, Northfilm's shelf | ![Status bar](screens/status.jpg) Status bar focused: the gear chip |
+| ![Settings](screens/settings.jpg) Settings dropdown from the status bar | ![Tile menu](screens/tile-menu.jpg) Tile menu (long-press OK) |
+| ![Up Next](screens/up-next.jpg) Up Next across apps | ![Cinematic](screens/cinematic.jpg) Cinematic: focus in the shelf |
+| ![All Apps](screens/all-apps.jpg) All Apps | ![Screensaver](screens/screensaver.jpg) Screensaver at night |
+| ![Forest by day](screens/forest-day.jpg) Forest by day | ![Dunes at dawn](screens/dunes-dawn.jpg) Dunes at dawn, Up Next |
+| ![Coast by day](screens/coast-day.jpg) Coast by day | ![Quiet](screens/quiet.jpg) Quiet: Black, Top Shelf off |

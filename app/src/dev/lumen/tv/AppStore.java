@@ -49,9 +49,10 @@ final class AppStore {
     private static final int DEFAULT_ROW = 5;
     static final float TILE_W = 288, TILE_H = 162;
 
-    final List<App> all = new ArrayList<>();
+    final List<App> all = new ArrayList<>();     // visible apps
+    final List<App> hidden = new ArrayList<>();  // hidden from Lumen (still installed)
     final List<App> row = new ArrayList<>();
-    final List<App> rest = new ArrayList<>();
+    final List<App> rest = new ArrayList<>();    // All Apps: everything not in the row
     private final SharedPreferences prefs;
     private final float scale;
 
@@ -74,10 +75,12 @@ final class AppStore {
                 byPkg.put(ai.packageName, app);
             }
         }
-        Set<String> hidden = prefs.getStringSet("hidden", Collections.<String>emptySet());
+        Set<String> hiddenSet = prefs.getStringSet(Prefs.HIDDEN, Collections.<String>emptySet());
         all.clear();
-        for (App a : byPkg.values()) if (!hidden.contains(a.pkg)) all.add(a);
+        hidden.clear();
+        for (App a : byPkg.values()) (hiddenSet.contains(a.pkg) ? hidden : all).add(a);
         Collections.sort(all, (a, b) -> a.label.compareToIgnoreCase(b.label));
+        Collections.sort(hidden, (a, b) -> a.label.compareToIgnoreCase(b.label));
         arrange(byPkg);
         return this;
     }

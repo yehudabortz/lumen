@@ -291,8 +291,8 @@ final class Scene {
         float[] ys = ridge(r, top, .05f * H, true, 3);
         for (int i = 0; i < ys.length; i++) {
             float x = X0 + i * STEP, u = Ui.clamp((x1 - x) / (x1 - x0), 0, 1);
-            ys[i] = u > 0 ? sea + 6 - (sea + 6 - ys[i]) * (float) Math.pow(u, .55) : H + 20;
+            ys[i] = sea + 2 - (sea + 2 - ys[i]) * (float) Math.pow(u, .55);  // past x1 it lies flat on the water
         }
-        solid(c, paint, fill(ys, H + 10), Ui.mix(far, p.near, t));
+        solid(c, paint, fill(ys, sea + 2), Ui.mix(far, p.near, t));  // filled only down to the waterline
     }
 }

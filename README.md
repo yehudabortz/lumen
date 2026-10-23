@@ -22,6 +22,14 @@ sdkmanager "build-tools;35.0.0" "platforms;android-34"
 ./build.sh
 ```
 
+Optional: to let the background and screensaver use Unsplash photos, create a free app at
+[unsplash.com/developers](https://unsplash.com/developers) and add its access key to `local.properties`
+(git-ignored) before building:
+
+```sh
+echo "unsplash.access_key=YOUR_ACCESS_KEY" >> local.properties
+```
+
 The first build creates a signing key, `lumen.keystore`, and stores its password in `local.properties`. Both are
 git-ignored. Keep them: updates must be signed with the same key.
 
@@ -41,6 +49,13 @@ to read TV listings: that's what fills the Top Shelf with your apps' "continue w
 
 ## Status
 
-The first slice works: the landscape scene with time-of-day lighting, weather and clock, the glass dock, the Top Shelf
-from your apps' Watch Next and channels, All Apps, and moving tiles (long-press OK on a Top Row tile; long-press in All
-Apps pins an app). Still to come: the tile menu, settings, cinematic mode, the screensaver and the Inter typeface.
+Working on a real TV: landscapes with time-of-day lighting (or Unsplash photos), weather and clock, the glass dock,
+the Top Shelf from your apps' Watch Next and channels, All Apps, the tile menu (long-press OK), settings as a dropdown
+from the status bar (Up to the clock, then OK), and the screensaver. To make Lumen the screensaver on Google TV, where
+third-party screensavers are hidden from Settings:
+
+```sh
+adb shell settings put secure screensaver_components dev.lumen.tv/.Screensaver
+```
+
+Still to come: cinematic mode, tile sizes and the Inter typeface.
