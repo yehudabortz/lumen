@@ -106,8 +106,6 @@
   .card .pic .ttl { position: absolute; left: 22px; bottom: 18px; right: 22px; z-index: 2; font-size: 30px; font-weight: 700; letter-spacing: -.03em;
                line-height: 1.05; text-shadow: 0 2px 16px rgba(0,0,0,.55); }
   .card .pic .ttl.serif { font-family: Georgia, 'Times New Roman', serif; font-weight: 400; letter-spacing: 0; font-size: 32px; }
-  .card .badge { position: absolute; left: 14px; top: 14px; z-index: 2; height: 30px; padding: 0 10px; border-radius: 9px; display: flex; align-items: center;
-               font-size: 15px; font-weight: 700; letter-spacing: -.01em; box-shadow: 0 4px 10px rgba(0,0,0,.3); }
   .card .bar2 { position: absolute; left: 22px; right: 22px; bottom: 12px; height: 5px; border-radius: 3px; background: rgba(255,255,255,.28); z-index: 2; }
   .card .bar2 i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; background: #fff; }
   .card .pic.has-bar .ttl { bottom: 30px; }
@@ -495,11 +493,9 @@ function shelfFor() {
   if (prefs['Top Shelf'] === 'Continue Watching') return UPNEXT;
   return TOP_PICKS;
 }
-function cardHTML(it, focused, showBadge, idx) {
-  const app = APPS.find(a => a.name === it.app);
-  const badge = showBadge && app.color ? `<div class="badge" style="background:${app.color[0]};color:${app.color[1]}">${it.app}</div>` : '';
+function cardHTML(it, focused) {
   const bar = it.p ? `<div class="bar2"><i style="width:${it.p * 100}%"></i></div>` : '';
-  return `<div class="card ${focused ? 'focus' : ''}"><div class="pic ${it.p ? 'has-bar' : ''} ${focused ? 'glint' : ''}">${cachedScene(it.kind, it.pal, it.seed, 'c' + it.seed)}${badge}<div class="ttl ${it.serif ? 'serif' : ''}">${it.t}</div>${bar}</div>
+  return `<div class="card ${focused ? 'focus' : ''}"><div class="pic ${it.p ? 'has-bar' : ''} ${focused ? 'glint' : ''}">${cachedScene(it.kind, it.pal, it.seed, 'c' + it.seed)}<div class="ttl ${it.serif ? 'serif' : ''}">${it.t}</div>${bar}</div>
     <div class="meta"><span>${it.sub}</span></div></div>`;
 }
 
@@ -538,9 +534,9 @@ function render() {
   // Top Shelf
   const sh = shelfFor(), shelfEl = $('shelf');
   if (sh) {
-    const left = dockL + pad;
+    const left = dockL;
     const head = `${sh.title} <span>· across your apps</span>`;
-    shelfEl.innerHTML = `<h4 style="left:${left}px">${head}</h4><div class="cards" style="left:${left}px">${sh.items.map((it, i) => cardHTML(it, s.view === 'shelf' && i === s.card, true, i)).join('')}</div>`;
+    shelfEl.innerHTML = `<h4 style="left:${left}px">${head}</h4><div class="cards" style="left:${left}px">${sh.items.map((it, i) => cardHTML(it, s.view === 'shelf' && i === s.card)).join('')}</div>`;
   } else shelfEl.innerHTML = '';
 
   // Cinematic: the focused card's artwork becomes the backdrop

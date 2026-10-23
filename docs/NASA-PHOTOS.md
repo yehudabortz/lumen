@@ -14,11 +14,13 @@ generally not copyrighted in the United States, but third-party credits and exce
 
 - Home searches again hourly or daily, according to **New photo**.
 - The screensaver searches every five minutes.
+- Selecting NASA photos starts a search immediately. On a cold cache, Lumen keeps the landscape visible until
+  the first result downloads, then replaces it with the NASA image.
 - Search and download run at background priority. Search metadata is capped at 512 KiB; each image is capped
   at 2 MiB and 1920 × 1280 pixels. The private cache retains at most six images and is shared by Home and the
   screensaver. A cached image remains visible if a search fails or the TV is offline.
-- Network retries wait 15 minutes. API and image requests have connection/read timeouts and are made only when a
-  NASA photo background is in use and its rotation is due.
+- Failed network requests retry after two minutes. API and image requests have connection/read timeouts and are
+  made only when a NASA photo background is in use and its rotation is due.
 
 NASA search results can contain third-party material; displayed attribution is taken from each result's
-photographer and center fields. The API's metadata is the source for the label shown by Lumen.
+photographer or NASA center field. The API metadata is the source for the label shown by Lumen.

@@ -23,7 +23,7 @@ import java.util.Random;
 
 /** Live NASA Image Library search with a small private rolling cache. */
 final class Nasa {
-    private static final long MAX_BYTES = 2 * 1024 * 1024, RETRY_MS = 15 * 60_000L;
+    private static final long MAX_BYTES = 2 * 1024 * 1024, RETRY_MS = 2 * 60_000L;
     private static final int MAX_CACHE_IMAGES = 6, MAX_SEARCH_BYTES = 512 * 1024;
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
     private static boolean warming;
@@ -67,7 +67,7 @@ final class Nasa {
         } catch (Exception ignored) { }
         long now = System.currentTimeMillis();
         long at = p.getLong(slot + ".at", 0), retry = p.getLong(slot + ".retry", 0);
-        if ((current == null || now < at || now - at >= period) && now >= retry)
+        if (current == null || ((now < at || now - at >= period) && now >= retry))
             warm(c, slot, ready);
         if (current == null) return null;
         Bitmap bitmap = decode(file(c, current), w, h);
@@ -87,10 +87,10 @@ final class Nasa {
         new Thread(() -> {
             android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND);
             boolean success = false;
+            SharedPreferences p = prefs(c);
             try {
-                SharedPreferences p = prefs(c);
-                long now = System.currentTimeMillis();
-                p.edit().putLong(slot + ".retry", now + RETRY_MS).apply();
+                // A retry timestamp left by a killed request must never block the next cold-cache fetch.
+                p.edit().remove(slot + ".retry").apply();
                 String previous = null;
                 try {
                     String raw = p.getString(slot + ".entry", null);
@@ -103,7 +103,10 @@ final class Nasa {
                     trimCache(c, p, found.id);
                     success = true;
                 }
-            } catch (Exception ignored) { }
+            } catch (Exception e) {
+                p.edit().putLong(slot + ".retry", System.currentTimeMillis() + RETRY_MS).apply();
+                android.util.Log.w("Lumen", "NASA photo search/download failed", e);
+            }
             finally {
                 ArrayList<Runnable> notify;
                 synchronized (Nasa.class) { warming = false; notify = new ArrayList<>(callbacks); callbacks.clear(); }

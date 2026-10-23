@@ -176,7 +176,7 @@ final class HomeView extends View implements Overlays.Host {
         if (prefs.is(Prefs.WEATHER, "on")) weather.refresh();
         if (prefs.is(Prefs.BACKGROUND, "unsplash") || prefs.is(Prefs.BACKGROUND, "nasa")) {
             long every = prefs.is(Prefs.PHOTOS, "day") ? 24 * 3600_000L : 3600_000L;
-            if (SystemClock.uptimeMillis() - photoAt > (photoCredit == null ? 15 * 60_000L : every)) renderScene();
+            if (SystemClock.uptimeMillis() - photoAt > (photoCredit == null ? 60_000L : every)) renderScene();
         } else if (wantedPalette() != palette) renderScene();
         invalidate();
     }
@@ -682,7 +682,7 @@ final class HomeView extends View implements Overlays.Host {
     private float shelfLeft() {
         int n = apps == null ? 1 : Math.max(1, Math.min(apps.row.size(), (int) ROW_MAX));
         float width = n * TILE_W + (n - 1) * GAP + 2 * PAD;
-        return (Ui.W - width) / 2 + PAD;
+        return (Ui.W - width) / 2;
     }
 
     private void drawCard(Canvas c, ShelfStore.Item it, float x, float y, int alpha) {
@@ -702,19 +702,6 @@ final class HomeView extends View implements Overlays.Host {
             c.clipRect(r);
             c.drawText(ellipsize(it.title, cardTitleP, w - 44), r.left + 22, r.bottom - (it.progress > 0 ? 34 : 22), cardTitleP);
             c.restore();
-        }
-        if (it.appName != null && !it.appName.isEmpty()) {
-            metaP.setTextSize(17);
-            float badgeW = Math.min(CARD_W - 28, metaP.measureText(it.appName) + 22);
-            r.set(x + 14, y + 14, x + 14 + badgeW, y + 43);
-            fill.setShader(null);
-            fill.setColor(Color.argb(Math.round(164 * alpha / 255f), 12, 14, 20));
-            rrect(c, r, 10, fill);
-            metaP.setColor(Color.WHITE);
-            metaP.setAlpha(alpha);
-            c.drawText(ellipsize(it.appName, metaP, badgeW - 16), x + 22, y + 34, metaP);
-            metaP.setTextSize(20);
-            r.set(cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2);
         }
         tileFinish(c, r, R_TILE * sc, f, it, alpha);
         if (it.progress > 0) {

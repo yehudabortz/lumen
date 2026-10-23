@@ -26,7 +26,7 @@ a browser. The arrow keys act as the D-pad, Enter as OK (hold it for the tile me
 │   │ artwork  │ │          │ │          │ │          │                        │  content cards
 │   │ ▬▬▬▬──── │ │          │ │          │ │          │                        │  (progress bar)
 │   └──────────┘ └──────────┘ └──────────┘ └──────────┘                        │
-│   Streamly · S2 · E4 · 22 min left                                          │  source app · progress
+│   S2 · E4 · 22 min left                                                      │  progress
 │     ╭────────────────────────────────────────────────────────────────╮       │
 │     │ ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐                    │       │  glass dock (Top Row)
 │     │ │      │ │FOCUS │ │      │ │      │ │      │                    │       │
@@ -41,7 +41,7 @@ a browser. The arrow keys act as the D-pad, Enter as OK (hold it for the tile me
 | Safe area | 96 px left/right, 64 px top/bottom (TV overscan); content aligns to x = 185 px |
 | Clock | Top-right, 40 px, Inter Medium, −2% tracking, tabular figures, 95% white. Optional date below, 21 px, 62% white |
 | Weather | Left of the clock, separated by a 1.5 px hairline: a color glyph (34 px) and the temperature, 30 px Medium, 62% white |
-| Top Shelf | Heading at y = 262 px: **Top Picks for You**, 25 px SemiBold, then “across your apps” in 62% white. First card aligns to the first dock tile. Cards 376×211 px, radius 20, gap 28, with the source app and episode/time line |
+| Top Shelf | Heading at y = 262 px: **Top Picks for You**, 25 px SemiBold, then “across your apps” in 62% white. First card aligns to the floating dock's outer edge. Cards 376×211 px, radius 20, gap 28, with the episode/time line |
 | Dock | Glass (see Materials), centered, bottom edge at 81% of screen height. Padding 22 px; radius 42 px = tile radius + padding, so the curves are concentric |
 | Tiles | 16:9, radius 20 px. Medium 288×162 px (default, five across), Small 232×130 (six), Large 376×211 (four) |
 | Focus | Scale 1.09 (cards 1.07) over 240 ms, deep soft shadow, a top-light sheen and one glint that sweeps across. The dock's specular highlight slides to sit above the focused tile |
@@ -53,7 +53,7 @@ a browser. The arrow keys act as the D-pad, Enter as OK (hold it for the tile me
 1. **Home.** Scene, weather and clock, the Top Shelf, the dock. Focus starts on the dock.
 2. **Top Shelf.** **Top Picks for You** mixes in-progress Watch Next items with recommendations from opted-in apps'
    preview channels. In-progress items come first, then suggestions and additional Watch Next items are interleaved
-   across sources. Each card names its app; progress bars show where to resume. **Continue Watching** mode shows Watch Next
+   across sources. Progress bars show where to resume. **Continue Watching** mode shows Watch Next
    items across apps. Hidden apps and apps switched off in *Apps in Top Shelf* are excluded.
 3. **Cinematic.** Up from the dock moves focus into the shelf. The focused item's artwork fills the screen behind a
    dark gradient, with the app name, the title, year · rating · genre, a two-line synopsis and *Resume*/*Play*.

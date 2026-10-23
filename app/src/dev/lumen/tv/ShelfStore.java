@@ -25,7 +25,7 @@ final class ShelfStore {
     static final String PERMISSION = "android.permission.READ_TV_LISTINGS";
 
     static final class Item {
-        String pkg, appName, title, line, intentUri;
+        String pkg, title, line, intentUri;
         Uri art;
         float progress;       // 0..1, or 0 when there's nothing to resume
         long engaged;         // last engagement, for ordering
@@ -64,8 +64,8 @@ final class ShelfStore {
             List<Item> l = list(it.pkg);
             if (l.size() < 16) { l.add(it); recommendations.add(it); }
         }
-        labelApps(c, upNext);
-        labelApps(c, recommendations);
+        removeUnavailableApps(c, upNext);
+        removeUnavailableApps(c, recommendations);
         return this;
     }
 
@@ -116,21 +116,12 @@ final class ShelfStore {
         if (seen.add(key)) picks.add(it);
     }
 
-    private static void labelApps(Context c, List<Item> items) {
-        Map<String, String> labels = new HashMap<>();
+    private static void removeUnavailableApps(Context c, List<Item> items) {
         java.util.Iterator<Item> iterator = items.iterator();
         while (iterator.hasNext()) {
             Item it = iterator.next();
-            String label = labels.get(it.pkg);
-            if (label == null) {
-                try {
-                    android.content.pm.ApplicationInfo app = c.getPackageManager().getApplicationInfo(it.pkg, 0);
-                    if (!app.enabled) { iterator.remove(); continue; }
-                    label = c.getPackageManager().getApplicationLabel(app).toString();
-                } catch (Exception ignored) { iterator.remove(); continue; }
-                labels.put(it.pkg, label);
-            }
-            it.appName = label;
+            try { if (!c.getPackageManager().getApplicationInfo(it.pkg, 0).enabled) iterator.remove(); }
+            catch (Exception ignored) { iterator.remove(); }
         }
     }
 
