@@ -117,15 +117,6 @@
   .card.focus .pic { transform: scale(1.07); box-shadow: 0 26px 44px -14px rgba(0,0,0,.7), 0 8px 16px -6px rgba(0,0,0,.45); }
   .stage:not(.busy) .card.focus .pic { animation: heartbeat 3400ms infinite; }
   .card.focus .meta { transform: translateY(8px); }
-  .glint::after { content: ""; position: absolute; inset: -40%; pointer-events: none; z-index: 4; opacity: 0;
-               background: radial-gradient(ellipse 36% 72% at 50% 50%, rgba(255,255,255,.11), rgba(255,255,255,.025) 36%, transparent 100%);
-               transform: translateX(-60%); animation: glint 1800ms ease-in-out 120ms both; }
-  @keyframes glint {
-    0% { opacity: 0; transform: translateX(-60%); }
-    50% { opacity: .32; transform: translateX(0); }
-    100% { opacity: 0; transform: translateX(60%); }
-  }
-
   .hero { position: absolute; left: 185px; top: 200px; width: 820px; opacity: 0; transform: translateY(16px); transition: opacity 400ms var(--ease), transform 400ms var(--ease); }
   .stage.shelf .hero { opacity: 1; transform: none; }
   .hero .app { font-size: 20px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-2); }
@@ -230,7 +221,7 @@
   .toast.on { opacity: 1; }
 
   /* ---------- Screensaver ---------- */
-  .saver { position: absolute; inset: 0; z-index: 20; opacity: 0; pointer-events: none; transition: opacity 900ms ease; background: #000; }
+  .saver { position: absolute; inset: 0; z-index: 20; opacity: 0; pointer-events: none; transition: opacity 450ms ease; background: #000; }
   .saver.on { opacity: 1; }
   .saver .scene { position: absolute; inset: -3%; animation: drift 90s ease-in-out infinite alternate; }
   .saver .scene svg { width: 100%; height: 100%; }
@@ -495,7 +486,7 @@ const cachedScene = (k, p, seed, id) => sceneCache[k + p + seed + id] ||= scene(
 /* ---------- Render ---------- */
 function tileHTML(app, focused, extra = '', withName = false) {
   const [style, inner] = app.art.split('|');
-  return `<div class="tile ${focused ? 'focus' : ''} ${extra}"><div class="art ${focused ? 'glint' : ''}" style="${style}">${focused ? '<div class="top"></div>' : ''}${inner}</div>${withName ? `<div class="name">${app.name}</div>` : ''}</div>`;
+  return `<div class="tile ${focused ? 'focus' : ''} ${extra}"><div class="art" style="${style}">${focused ? '<div class="top"></div>' : ''}${inner}</div>${withName ? `<div class="name">${app.name}</div>` : ''}</div>`;
 }
 const rowApps = () => topRow.map(i => APPS[i]);
 const gridApps = () => APPS.filter((_, i) => !topRow.includes(i));
@@ -506,7 +497,7 @@ function shelfFor() {
 }
 function cardHTML(it, focused) {
   const bar = it.p ? `<div class="bar2"><i style="width:${it.p * 100}%"></i></div>` : '';
-  return `<div class="card ${focused ? 'focus' : ''}"><div class="pic ${it.p ? 'has-bar' : ''} ${focused ? 'glint' : ''}">${cachedScene(it.kind, it.pal, it.seed, 'c' + it.seed)}<div class="ttl ${it.serif ? 'serif' : ''}">${it.t}</div>${bar}</div>
+  return `<div class="card ${focused ? 'focus' : ''}"><div class="pic ${it.p ? 'has-bar' : ''}">${cachedScene(it.kind, it.pal, it.seed, 'c' + it.seed)}<div class="ttl ${it.serif ? 'serif' : ''}">${it.t}</div>${bar}</div>
     <div class="meta"><span>${it.sub}</span></div></div>`;
 }
 

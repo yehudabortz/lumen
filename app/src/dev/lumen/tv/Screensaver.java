@@ -50,14 +50,16 @@ public final class Screensaver extends DreamService {
     }
 
     static final class SaverView extends View {
-        private static final long PHOTO_MS = 5 * 60_000L, CORNER_MS = 4 * 60_000L, FADE_MS = 2500, DRIFT_MS = 90_000L;
+        private static final long PHOTO_MS = 5 * 60_000L, CORNER_MS = 4 * 60_000L;
+        private static final long ENTRY_FADE_MS = 450, PHOTO_FADE_MS = 2500, DRIFT_MS = 90_000L;
 
         private final Prefs prefs;
         private final Weather weather;
         private Bitmap current, previous;
         private String credit;
-        private long shownAt, nextAt, started = SystemClock.uptimeMillis();
+        private long shownAt, nextAt, fadeDuration = ENTRY_FADE_MS, started = SystemClock.uptimeMillis();
         private boolean loading, loadAgain;
+        private boolean shownFirstImage;
         private final Random random = new Random();
         private final Paint bmp = new Paint(Paint.FILTER_BITMAP_FLAG), fill = new Paint(Paint.ANTI_ALIAS_FLAG), stroke = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint timeP, lineP, creditP;
@@ -161,6 +163,8 @@ public final class Screensaver extends DreamService {
                     current = fb;
                     credit = fcr;
                     shownAt = SystemClock.uptimeMillis();
+                    fadeDuration = shownFirstImage ? PHOTO_FADE_MS : ENTRY_FADE_MS;
+                    shownFirstImage = true;
                     nextAt = shownAt + PHOTO_MS;
                     loading = false;
                     invalidate();
@@ -173,7 +177,7 @@ public final class Screensaver extends DreamService {
             long now = SystemClock.uptimeMillis();
             if (now > nextAt && nextAt > 0) { nextAt = Long.MAX_VALUE; load(); }
             c.drawColor(Color.BLACK);
-            float fade = Ui.clamp((now - shownAt) / (float) FADE_MS, 0, 1);
+            float fade = Ui.clamp((now - shownAt) / (float) fadeDuration, 0, 1);
             if (previous != null && fade < 1) drawDrifting(c, previous, 255, now);
             if (current != null) drawDrifting(c, current, Math.round(255 * fade), now);
             if (fade >= 1 && previous != null) { previous.recycle(); previous = null; }

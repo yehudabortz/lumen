@@ -80,7 +80,6 @@ final class HomeView extends View implements Overlays.Host {
     private final Spring appsS = new Spring(1.9f, .95f), rowScroll = new Spring(2.3f, 1f), cardScroll = new Spring(2.3f, 1f),
             gridScroll = new Spring(2.3f, 1f), spec = new Spring(2.1f, .88f);
     private final Map<Object, Spring> focus = new HashMap<>();
-    private final Map<Object, Long> glints = new HashMap<>();
     private long lastFrame, lastKey, toastUntil, heartbeatEpoch = SystemClock.uptimeMillis();
     private String toast, clockText;
     private int clockMinute = -1;
@@ -107,10 +106,6 @@ final class HomeView extends View implements Overlays.Host {
             new float[]{0, .38f, .7f, 1}, Shader.TileMode.CLAMP);
     private final Paint scrollMask = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RadialGradient glowU = new RadialGradient(0, 0, 1, Color.WHITE, WHITE_0, Shader.TileMode.CLAMP);
-    private final RadialGradient tileGlint = new RadialGradient(0, 0, 1,
-            new int[]{Color.argb(18, 255, 255, 255), Color.argb(6, 255, 255, 255), WHITE_0},
-            new float[]{0, .3f, 1}, Shader.TileMode.CLAMP);
-    private final Matrix glintMatrix = new Matrix();
 
     HomeView(Context c, Host host) {
         super(c);
@@ -336,14 +331,14 @@ final class HomeView extends View implements Overlays.Host {
         } else if (area == Area.ROW) {
             if (dx != 0 && !row.isEmpty()) {
                 int n = Math.max(0, Math.min(row.size() - 1, rowI + dx));
-                if (n != rowI) { rowI = n; glint(row.get(rowI)); }
+                if (n != rowI) { rowI = n; focusChanged(); }
             }
-            if (dy < 0 && shelf != null && !shelf.items.isEmpty()) { area = Area.SHELF; cardI = 0; glint(shelf.items.get(0)); }
+            if (dy < 0 && shelf != null && !shelf.items.isEmpty()) { area = Area.SHELF; cardI = 0; focusChanged(); }
             else if (dy < 0) toStatus();
-            if (dy > 0 && !rest.isEmpty()) { area = Area.GRID; gridI = Math.min(rowI, Math.min(4, rest.size() - 1)); appsS.target = 1; glint(rest.get(gridI)); }
+            if (dy > 0 && !rest.isEmpty()) { area = Area.GRID; gridI = Math.min(rowI, Math.min(4, rest.size() - 1)); appsS.target = 1; focusChanged(); }
         } else if (area == Area.SHELF) {
             int n = Math.max(0, Math.min(shelf.items.size() - 1, cardI + dx));
-            if (n != cardI) { cardI = n; glint(shelf.items.get(cardI)); }
+            if (n != cardI) { cardI = n; focusChanged(); }
             if (dy > 0) area = Area.ROW;
             if (dy < 0) toStatus();
         } else if (area == Area.STATUS) {
@@ -351,8 +346,8 @@ final class HomeView extends View implements Overlays.Host {
         } else {
             int n = gridI + dx + dy * 5;
             if (dy < 0 && gridI < 5) { if (!row.isEmpty()) { area = Area.ROW; appsS.target = 0; } else toStatus(); }
-            else if (n >= 0 && n < rest.size() && (dx == 0 || n / 5 == gridI / 5)) { gridI = n; glint(rest.get(gridI)); }
-            else if (dy > 0 && n >= rest.size() && gridI / 5 < (rest.size() - 1) / 5) { gridI = rest.size() - 1; glint(rest.get(gridI)); }
+            else if (n >= 0 && n < rest.size() && (dx == 0 || n / 5 == gridI / 5)) { gridI = n; focusChanged(); }
+            else if (dy > 0 && n >= rest.size() && gridI / 5 < (rest.size() - 1) / 5) { gridI = rest.size() - 1; focusChanged(); }
         }
         rememberFocusedApp();
         invalidate();
@@ -398,9 +393,8 @@ final class HomeView extends View implements Overlays.Host {
         invalidate();
     }
 
-    private void glint(Object o) {
+    private void focusChanged() {
         heartbeatEpoch = SystemClock.uptimeMillis();
-        if (!reduced()) glints.put(o, heartbeatEpoch);
     }
 
     private void showToast(String t) { toast = t; toastUntil = SystemClock.uptimeMillis() + 2200; invalidate(); }
@@ -503,9 +497,7 @@ final class HomeView extends View implements Overlays.Host {
         drawToast(c, now);
         c.restore();
 
-        boolean glinting = false;
-        for (long g : glints.values()) if (now - g < 1950) { glinting = true; break; }
-        if (anim || glinting || moving || (toast != null && now < toastUntil + 400)) postInvalidateOnAnimation();
+        if (anim || moving || (toast != null && now < toastUntil + 400)) postInvalidateOnAnimation();
         else if (heartbeatActive()) postInvalidateDelayed(64);
         else lastFrame = 0;  // idle: the next frame starts fresh
     }
@@ -762,7 +754,7 @@ final class HomeView extends View implements Overlays.Host {
             c.drawText(ellipsize(it.title, cardTitleP, w - 44), r.left + 22, r.bottom - (it.progress > 0 ? 34 : 22), cardTitleP);
             c.restore();
         }
-        tileFinish(c, r, R_TILE * sc, f, it, alpha);
+        tileFinish(c, r, R_TILE * sc, f, alpha);
         if (it.progress > 0) {
             float bl = r.left + 22 * sc, br = r.right - 22 * sc, by = r.bottom - 12 * sc;
             fill.setShader(null);
@@ -884,7 +876,7 @@ final class HomeView extends View implements Overlays.Host {
         float fc = Ui.clamp(f, 0, 1);
         Shadow.draw(c, r, R_TILE * sc, Ui.lerp(8, 18, fc), Ui.lerp(4, 18, fc), Ui.lerp(.28f, .55f, fc) * alpha, bmp);
         if (a.tile != null) drawBitmapRound(c, a.tile, r, R_TILE * sc, al);
-        tileFinish(c, r, R_TILE * sc, f, a, al);
+        tileFinish(c, r, R_TILE * sc, f, al);
         if (reduced() && f > .5f) {  // Reduced motion: focus shown with a ring instead of a zoom
             stroke.setShader(null);
             stroke.setStrokeWidth(3);
@@ -894,8 +886,8 @@ final class HomeView extends View implements Overlays.Host {
         c.restore();
     }
 
-    /** Top-light sheen, hairline rim and the one-time glint that sweeps a newly focused tile. */
-    private void tileFinish(Canvas c, RectF rr, float radius, float f, Object key, int alpha) {
+    /** Static top-light sheen and hairline rim; focus motion comes from scale and shadow. */
+    private void tileFinish(Canvas c, RectF rr, float radius, float f, int alpha) {
         if (f > 0.01f) {
             fill.setColor(Color.WHITE);
             unit(fill, sheenU, rr.top, rr.height(), Math.round(255 * Ui.clamp(f, 0, 1) * alpha / 255f));
@@ -910,24 +902,6 @@ final class HomeView extends View implements Overlays.Host {
         stroke.setColor(Color.argb(Math.round(28 * alpha / 255f), 255, 255, 255));
         rrect(c, rr.left + .6f, rr.top + .6f, rr.right - .6f, rr.bottom - .6f, radius, stroke);
         stroke.setAlpha(255);
-        Long g = glints.get(key);
-        if (g != null) {
-            float t = (SystemClock.uptimeMillis() - g - 120) / 1800f;
-            if (t >= 1) glints.remove(key);
-            else if (t > 0) {
-                float env = (float) Math.pow(Math.sin(Math.PI * t), 2);
-                float e = t * t * (3 - 2 * t);
-                float bx = Ui.lerp(rr.left - rr.width() * .6f, rr.right + rr.width() * .6f, e);
-                glintMatrix.setScale(rr.width() * .78f, rr.height() * .88f);
-                glintMatrix.postTranslate(bx, rr.centerY());
-                tileGlint.setLocalMatrix(glintMatrix);
-                fill.setAlpha(Math.round(255 * env * alpha / 255f));
-                fill.setShader(tileGlint);
-                rrect(c, rr, radius, fill);
-                fill.setShader(null);
-                fill.setAlpha(255);
-            }
-        }
     }
 
     private void drawBitmapRound(Canvas c, Bitmap b, RectF rr, float radius, int alpha) {

@@ -44,7 +44,7 @@ a browser. The arrow keys act as the D-pad, Enter as OK (hold it for the tile me
 | Top Shelf | Heading at y = 262 px: **Top Picks for You**, 25 px SemiBold, then “across your apps” in 62% white. First card aligns to the floating dock's outer edge. Cards 376×211 px, radius 20, gap 28, with the episode/time line |
 | Dock | Glass (see Materials), centered, bottom edge at 81% of screen height. Padding 22 px; radius 42 px = tile radius + padding, so the curves are concentric |
 | Tiles | 16:9, radius 20 px. Medium 288×162 px (default, five across), Small 232×130 (six), Large 376×211 (four) |
-| Focus | Scale 1.09 (cards 1.07) over 240 ms, deep soft shadow, a low-contrast top-light sheen and a faint 1.8 s glint sweep. Focused tiles and cards add a softly eased 0.4% double-beat pulse every 3.4 s; it restarts gently when Home regains focus. Reduced motion and open menus pause it. The dock's specular highlight slides to sit above the focused tile |
+| Focus | Scale 1.09 (cards 1.07) over 240 ms, deep soft shadow and a low-contrast, static top-light sheen. Focused tiles and cards add a softly eased 0.4% double-beat pulse every 3.4 s; it restarts gently when Home regains focus. Reduced motion and open menus pause it. The dock's specular highlight slides to sit above the focused tile |
 | Label | Focused tile only (default). 25 px SemiBold, 22 px under the dock |
 | Legibility | A dark vignette behind the clock and along the bottom, plus a soft band behind the shelf that strengthens on bright daytime scenes. During the All Apps scroll, a pre-blurred gradient sits above the moving dock and below the clock/date |
 
@@ -71,7 +71,8 @@ a browser. The arrow keys act as the D-pad, Enter as OK (hold it for the tile me
    menu and the remote's Menu key open the same dropdown.
 7. **Screensaver.** The same scene, full screen, drifting very slowly (a 90 s zoom-and-pan, back and forth), with
    a large clock (150 px SemiBold), the date and the weather at the bottom left. The text block moves to a new spot
-   every few minutes so nothing burns into OLED panels. Any key wakes the TV straight back to Home.
+   every few minutes so nothing burns into OLED panels. It fades in over 450 ms; new photos crossfade over 2.5 s.
+   Any key wakes the TV straight back to Home.
 
 ## Content: where the shelf comes from
 
