@@ -118,9 +118,13 @@
   .stage:not(.busy) .card.focus .pic { animation: heartbeat 3400ms infinite; }
   .card.focus .meta { transform: translateY(8px); }
   .glint::after { content: ""; position: absolute; inset: -40%; pointer-events: none; z-index: 4; opacity: 0;
-               background: linear-gradient(112deg, transparent 30%, rgba(255,255,255,.16) 48%, rgba(255,255,255,.04) 58%, transparent 72%);
-               transform: translateX(-60%); animation: glint 1400ms ease-in-out 100ms both; }
-  @keyframes glint { 0%, 100% { opacity: 0; transform: translateX(-60%); } 50% { opacity: .42; transform: translateX(0); } }
+               background: radial-gradient(ellipse 36% 72% at 50% 50%, rgba(255,255,255,.11), rgba(255,255,255,.025) 36%, transparent 100%);
+               transform: translateX(-60%); animation: glint 1800ms ease-in-out 120ms both; }
+  @keyframes glint {
+    0% { opacity: 0; transform: translateX(-60%); }
+    50% { opacity: .32; transform: translateX(0); }
+    100% { opacity: 0; transform: translateX(60%); }
+  }
 
   .hero { position: absolute; left: 185px; top: 200px; width: 820px; opacity: 0; transform: translateY(16px); transition: opacity 400ms var(--ease), transform 400ms var(--ease); }
   .stage.shelf .hero { opacity: 1; transform: none; }

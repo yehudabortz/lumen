@@ -93,8 +93,9 @@ final class HomeView extends View implements Overlays.Host {
     private final Matrix m = new Matrix(), sm = new Matrix();
     private final Map<Bitmap, BitmapShader> shaders = new HashMap<>();
     private static final int WHITE_0 = 0x00FFFFFF;
-    private final LinearGradient sheenU = new LinearGradient(0, 0, 0, 1, Color.argb(36, 255, 255, 255), WHITE_0, Shader.TileMode.CLAMP);
-    private final LinearGradient tileRimU = new LinearGradient(0, 0, 0, 1, Color.argb(56, 255, 255, 255), Color.argb(26, 255, 255, 255), Shader.TileMode.CLAMP);
+    private final LinearGradient sheenU = new LinearGradient(0, 0, 0, 1,
+            new int[]{Color.argb(18, 255, 255, 255), Color.argb(9, 255, 255, 255), WHITE_0},
+            new float[]{0, .48f, 1}, Shader.TileMode.CLAMP);
     private final LinearGradient dockRimU = new LinearGradient(0, 0, 0, 1,
             new int[]{Color.argb(199, 255, 255, 255), Color.argb(66, 255, 255, 255), Color.argb(18, 255, 255, 255), Color.argb(10, 255, 255, 255), Color.argb(51, 255, 255, 255)},
             new float[]{0, .14f, .42f, .78f, 1}, Shader.TileMode.CLAMP);
@@ -106,6 +107,10 @@ final class HomeView extends View implements Overlays.Host {
             new float[]{0, .38f, .7f, 1}, Shader.TileMode.CLAMP);
     private final Paint scrollMask = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RadialGradient glowU = new RadialGradient(0, 0, 1, Color.WHITE, WHITE_0, Shader.TileMode.CLAMP);
+    private final RadialGradient tileGlint = new RadialGradient(0, 0, 1,
+            new int[]{Color.argb(18, 255, 255, 255), Color.argb(6, 255, 255, 255), WHITE_0},
+            new float[]{0, .3f, 1}, Shader.TileMode.CLAMP);
+    private final Matrix glintMatrix = new Matrix();
 
     HomeView(Context c, Host host) {
         super(c);
@@ -117,6 +122,8 @@ final class HomeView extends View implements Overlays.Host {
         setFocusable(true);
         setFocusableInTouchMode(true);
         stroke.setStyle(Paint.Style.STROKE);
+        stroke.setDither(true);
+        fill.setDither(true);
         ColorMatrix sat = new ColorMatrix();
         sat.setSaturation(1.45f);
         glassPaint.setColorFilter(new ColorMatrixColorFilter(sat));
@@ -497,7 +504,7 @@ final class HomeView extends View implements Overlays.Host {
         c.restore();
 
         boolean glinting = false;
-        for (long g : glints.values()) if (now - g < 1550) { glinting = true; break; }
+        for (long g : glints.values()) if (now - g < 1950) { glinting = true; break; }
         if (anim || glinting || moving || (toast != null && now < toastUntil + 400)) postInvalidateOnAnimation();
         else if (heartbeatActive()) postInvalidateDelayed(64);
         else lastFrame = 0;  // idle: the next frame starts fresh
@@ -891,30 +898,34 @@ final class HomeView extends View implements Overlays.Host {
     private void tileFinish(Canvas c, RectF rr, float radius, float f, Object key, int alpha) {
         if (f > 0.01f) {
             fill.setColor(Color.WHITE);
-            unit(fill, sheenU, rr.top, rr.height() * .45f, Math.round(255 * Ui.clamp(f, 0, 1) * alpha / 255f));
+            unit(fill, sheenU, rr.top, rr.height(), Math.round(255 * Ui.clamp(f, 0, 1) * alpha / 255f));
             rrect(c, rr, radius, fill);
             fill.setShader(null);
             fill.setAlpha(255);
         }
         stroke.setStrokeWidth(1.2f);
         stroke.setColor(Color.WHITE);
-        unit(stroke, tileRimU, rr.top, 18, alpha);
-        rrect(c, rr.left + .6f, rr.top + .6f, rr.right - .6f, rr.bottom - .6f, radius, stroke);
         stroke.setShader(null);
+        stroke.setAlpha(255);
+        stroke.setColor(Color.argb(Math.round(28 * alpha / 255f), 255, 255, 255));
+        rrect(c, rr.left + .6f, rr.top + .6f, rr.right - .6f, rr.bottom - .6f, radius, stroke);
         stroke.setAlpha(255);
         Long g = glints.get(key);
         if (g != null) {
-            float t = (SystemClock.uptimeMillis() - g - 100) / 1400f;
+            float t = (SystemClock.uptimeMillis() - g - 120) / 1800f;
             if (t >= 1) glints.remove(key);
             else if (t > 0) {
                 float env = (float) Math.pow(Math.sin(Math.PI * t), 2);
                 float e = t * t * (3 - 2 * t);
                 float bx = Ui.lerp(rr.left - rr.width() * .6f, rr.right + rr.width() * .6f, e);
-                int a1 = Math.round(28 * env * alpha / 255f), a2 = Math.round(8 * env * alpha / 255f);
-                fill.setShader(new LinearGradient(bx - rr.width() * .42f, rr.top, bx + rr.width() * .18f, rr.bottom,
-                        new int[]{0, Color.argb(a1, 255, 255, 255), Color.argb(a2, 255, 255, 255), 0}, new float[]{0, .42f, .64f, 1}, Shader.TileMode.CLAMP));
+                glintMatrix.setScale(rr.width() * .78f, rr.height() * .88f);
+                glintMatrix.postTranslate(bx, rr.centerY());
+                tileGlint.setLocalMatrix(glintMatrix);
+                fill.setAlpha(Math.round(255 * env * alpha / 255f));
+                fill.setShader(tileGlint);
                 rrect(c, rr, radius, fill);
                 fill.setShader(null);
+                fill.setAlpha(255);
             }
         }
     }
