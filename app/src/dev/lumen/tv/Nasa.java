@@ -25,6 +25,25 @@ import java.util.Random;
 final class Nasa {
     private static final long MAX_BYTES = 2 * 1024 * 1024, RETRY_MS = 2 * 60_000L;
     private static final int MAX_CACHE_IMAGES = 6, MAX_SEARCH_BYTES = 512 * 1024;
+    private static final String[] NATURE_QUERIES = {
+            "Earth ocean", "Earth clouds", "Earth landscape", "Earth forest",
+            "Earth mountains", "Earth aurora", "Earth coast", "Earth glacier"
+    };
+    private static final String[] CONCEPT_TERMS = {
+            "artist concept", "artist's concept", "artist rendition", "artist impression",
+            "concept art", "illustration", "diagram", "schematic", "infographic",
+            "simulation", "computer generated", "3d model", "visualization", "rendering",
+            "map", "mapped", "chart", "graph", "data product", "city lights", "night lights", "urban"
+    };
+    private static final String[] PEOPLE_TERMS = {
+            "astronaut", "cosmonaut", "crew portrait", "portrait", "people", "person",
+            "scientist", "researcher", "engineer", "spacewalk", "group photo"
+    };
+    private static final String[] NATURE_TERMS = {
+            "earth", "ocean", "sea", "coast", "cloud", "forest", "mountain", "glacier",
+            "river", "lake", "desert", "volcano", "reef", "island", "aurora", "ice",
+            "snow", "landscape", "hurricane", "storm", "vegetation", "earth observation"
+    };
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
     private static boolean warming;
     private static final List<Runnable> callbacks = new ArrayList<>();
@@ -52,7 +71,7 @@ final class Nasa {
     private Nasa() {}
 
     private static File directory(Context c) {
-        File dir = new File(c.getCacheDir(), "nasa-live-v1"); dir.mkdirs(); return dir;
+        File dir = new File(c.getCacheDir(), "nasa-live-v4"); dir.mkdirs(); return dir;
     }
     private static File file(Context c, Entry e) { return new File(directory(c), e.id + ".jpg"); }
     private static SharedPreferences prefs(Context c) { return c.getSharedPreferences("nasa", Context.MODE_PRIVATE); }
@@ -115,15 +134,24 @@ final class Nasa {
         }, "nasa-search").start();
     }
 
-    /** Search broad space results, pick a random result, then choose its display-sized JPEG rendition. */
+    /** Search live NASA Earth and nature results, then choose a display-sized JPEG rendition. */
     private static Entry searchAndDownload(Context c, String previousId) throws Exception {
-        String query = "space";
+        Random random = new Random();
+        String query = NATURE_QUERIES[random.nextInt(NATURE_QUERIES.length)];
+        Entry entry = searchQuery(c, query, previousId, random);
+        if (entry == null && !"Earth nature".equals(query))
+            entry = searchQuery(c, "Earth nature", previousId, random);
+        if (entry == null) throw new IllegalStateException("No suitable NASA Earth or nature images found");
+        return entry;
+    }
+
+    private static Entry searchQuery(Context c, String query, String previousId, Random random) throws Exception {
         JSONObject response = getJson("https://images-api.nasa.gov/search?q=" +
-                URLEncoder.encode(query, "UTF-8") + "&media_type=image&page_size=30&page=" + (1 + new Random().nextInt(100)), MAX_SEARCH_BYTES);
+                URLEncoder.encode(query, "UTF-8") + "&media_type=image&page_size=30&page=1", MAX_SEARCH_BYTES);
         JSONObject collection = response.optJSONObject("collection");
-        if (collection == null) throw new IllegalStateException("NASA search response");
+        if (collection == null) return null;
         JSONArray items = collection.optJSONArray("items");
-        if (items == null || items.length() == 0) throw new IllegalStateException("NASA search empty");
+        if (items == null || items.length() == 0) return null;
         ArrayList<JSONObject> candidates = new ArrayList<>();
         for (int i = 0; i < items.length(); i++) {
             JSONObject item = items.optJSONObject(i);
@@ -131,12 +159,12 @@ final class Nasa {
             JSONObject meta = data == null || data.length() == 0 ? null : data.optJSONObject(0);
             String id = meta == null ? "" : meta.optString("nasa_id");
             if (meta != null && id.matches("[A-Za-z0-9_-]{1,100}") && !id.equals(previousId)
-                    && "image".equals(meta.optString("media_type"))) candidates.add(item);
+                    && "image".equals(meta.optString("media_type")) && isNatureEarth(meta)) candidates.add(item);
         }
-        Collections.shuffle(candidates);
+        Collections.shuffle(candidates, random);
         int attempts = 0;
         for (JSONObject item : candidates) {
-            if (attempts++ >= 3) break;
+            if (attempts++ >= 4) break;
             JSONArray data = item.optJSONArray("data");
             JSONObject meta = data.optJSONObject(0);
             String id = meta.optString("nasa_id"), title = meta.optString("title", "NASA image");
@@ -151,7 +179,29 @@ final class Nasa {
                 return result;
             } catch (Exception ignored) { }
         }
-        throw new IllegalStateException("No displayable NASA images in search results");
+        return null;
+    }
+
+    private static boolean isNatureEarth(JSONObject meta) {
+        String title = meta.optString("title", "").toLowerCase(java.util.Locale.US);
+        String description = meta.optString("description", "").toLowerCase(java.util.Locale.US);
+        JSONArray keywords = meta.optJSONArray("keywords");
+        String tags = "";
+        if (keywords != null) for (int i = 0; i < keywords.length(); i++)
+            tags += " " + keywords.optString(i).toLowerCase(java.util.Locale.US);
+
+        String searchable = title + " " + description + " " + tags;
+        for (String term : CONCEPT_TERMS) if (searchable.contains(term)) return false;
+        // People filters use the title and catalog keywords so incidental mentions in captions
+        // do not discard a landscape photo taken by a crew member.
+        String subject = title + " " + tags;
+        for (String term : PEOPLE_TERMS) if (subject.contains(term)) return false;
+        // NASA also returns planetary auroras and terrain; keep those only when explicitly Earth.
+        if ((searchable.contains("jupiter") || searchable.contains("mars") || searchable.contains("saturn")
+                || searchable.contains("venus") || searchable.contains("io volcano"))
+                && !searchable.contains("earth")) return false;
+        for (String term : NATURE_TERMS) if (searchable.contains(term)) return true;
+        return false;
     }
 
     private static String rendition(JSONArray assets) {

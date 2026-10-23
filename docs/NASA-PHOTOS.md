@@ -1,8 +1,10 @@
 # NASA photos
 
-Lumen searches the public [NASA Image and Video Library](https://images.nasa.gov) API for `space` images.
-At each rotation, it chooses an image from the current search results and downloads the result's large or medium
-JPEG rendition. The result set is live; Lumen does not ship or maintain
+Lumen searches the public [NASA Image and Video Library](https://images.nasa.gov) API for Earth and nature images,
+using rotating live searches for oceans, clouds, forests, mountains, auroras, coasts, and glaciers. It filters out
+catalog entries identified as concept art, diagrams, simulations, or people-focused images. At each rotation, it
+chooses an image from the current search results and downloads the result's large or medium JPEG rendition. The
+result set is live; Lumen does not ship or maintain
 a predefined set of image IDs. No account or API key is needed. NASA documents the public search API in its
 [API guide](https://images.nasa.gov/docs/images.nasa.gov_api_docs.pdf).
 

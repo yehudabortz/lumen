@@ -114,8 +114,9 @@ server.
 
 Background and screensaver can use **NASA photos** from the public
 [NASA Image and Video Library](https://images.nasa.gov) search and asset APIs. No account, API key or new
-permission is needed. At each rotation Lumen searches for images, selects one of the returned results, and fetches
-its available JPEG rendition. It does not ship a predefined NASA image list. Title and photographer or NASA center
+permission is needed. At each rotation Lumen searches live Earth and nature topics, filters out concept art,
+diagrams, simulations, and people-focused catalog entries, then fetches a returned image's available JPEG
+rendition. It does not ship a predefined NASA image list. Title and photographer or NASA center
 are read from that result's metadata and shown on screen. See [NASA photo behavior](../NASA-PHOTOS.md).
 
 - **Home:** rotates hourly or daily using **New photo**. NASA is an appearance option; Alpine remains the default.
