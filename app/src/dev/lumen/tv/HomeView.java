@@ -497,7 +497,7 @@ final class HomeView extends View implements Overlays.Host {
         c.restore();
 
         boolean glinting = false;
-        for (long g : glints.values()) if (now - g < 1000) { glinting = true; break; }
+        for (long g : glints.values()) if (now - g < 1550) { glinting = true; break; }
         if (anim || glinting || moving || (toast != null && now < toastUntil + 400)) postInvalidateOnAnimation();
         else if (heartbeatActive()) postInvalidateDelayed(64);
         else lastFrame = 0;  // idle: the next frame starts fresh
@@ -904,14 +904,15 @@ final class HomeView extends View implements Overlays.Host {
         stroke.setAlpha(255);
         Long g = glints.get(key);
         if (g != null) {
-            float t = (SystemClock.uptimeMillis() - g - 60) / 900f;
+            float t = (SystemClock.uptimeMillis() - g - 100) / 1400f;
             if (t >= 1) glints.remove(key);
             else if (t > 0) {
-                float env = t < .3f ? t / .3f : 1 - (t - .3f) / .7f, e = Ui.easeOut(t);
+                float env = (float) Math.pow(Math.sin(Math.PI * t), 2);
+                float e = t * t * (3 - 2 * t);
                 float bx = Ui.lerp(rr.left - rr.width() * .6f, rr.right + rr.width() * .6f, e);
-                int a1 = Math.round(66 * env * alpha / 255f), a2 = Math.round(20 * env * alpha / 255f);
-                fill.setShader(new LinearGradient(bx - rr.width() * .3f, rr.top, bx + rr.width() * .1f, rr.bottom,
-                        new int[]{0, Color.argb(a1, 255, 255, 255), Color.argb(a2, 255, 255, 255), 0}, new float[]{0, .45f, .6f, 1}, Shader.TileMode.CLAMP));
+                int a1 = Math.round(28 * env * alpha / 255f), a2 = Math.round(8 * env * alpha / 255f);
+                fill.setShader(new LinearGradient(bx - rr.width() * .42f, rr.top, bx + rr.width() * .18f, rr.bottom,
+                        new int[]{0, Color.argb(a1, 255, 255, 255), Color.argb(a2, 255, 255, 255), 0}, new float[]{0, .42f, .64f, 1}, Shader.TileMode.CLAMP));
                 rrect(c, rr, radius, fill);
                 fill.setShader(null);
             }
