@@ -235,7 +235,7 @@ Selected rows in menus are near-white pills (94%) with dark text, as on a clean 
 | | Units | Auto / °F / °C | **Auto** |
 | Screensaver | Screensaver | NASA photos / Unsplash photos (with a key) / Landscape / Black | **NASA photos** |
 | Apps | Hidden apps | List with toggles | none |
-| About | Version, source link, how to switch back to the original home screen | | |
+| About | Version and creator credit (Yehuda Bortz), how to switch back to the original home screen | | |
 
 ## Technical shape (keeps it light)
 

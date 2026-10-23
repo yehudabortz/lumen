@@ -169,7 +169,7 @@ final class Overlays {
                 else rows.add(new Row(CHOICE, o.label, o.key, p.name(o.key)));
             }
             rows.add(new Row(HEAD, "About", null, null));
-            rows.add(new Row(NOTE, "Lumen " + BuildInfo.VERSION + " · open source", null, null));
+            rows.add(new Row(NOTE, "Lumen " + BuildInfo.VERSION + " · by Yehuda Bortz", null, null));
             rows.add(new Row(NOTE, "No ads, no tracking: the shelf shows only what your apps publish.", null, null));
         } else if (Prefs.PAGE_HIDDEN.equals(page)) {
             List<AppStore.App> every = new ArrayList<>(apps.all);
