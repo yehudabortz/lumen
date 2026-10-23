@@ -19,12 +19,12 @@ import java.util.Random;
 /**
  * Lumen's screensaver: a NASA photo (or another selected background) drifting slowly, a new one crossfading in every five
  * minutes, with a large clock, the date and the weather. The text block moves to another corner every few minutes
- * so nothing burns into an OLED panel. Any key wakes the TV (the system handles that for non-interactive dreams).
+ * so nothing burns into an OLED panel. Any remote key exits the dream and returns to the underlying home screen.
  */
 public final class Screensaver extends DreamService {
     @Override public void onAttachedToWindow() {
         super.onAttachedToWindow();
-        setInteractive(false);
+        setInteractive(true);
         setFullscreen(true);
         setScreenBright(true);
         setContentView(new SaverView(this));
@@ -53,6 +53,8 @@ public final class Screensaver extends DreamService {
 
         SaverView(Context c) {
             super(c);
+            setFocusable(true);
+            setFocusableInTouchMode(true);
             Ui.init(c);
             prefs = new Prefs(c);
             stroke.setStyle(Paint.Style.STROKE);
@@ -65,6 +67,11 @@ public final class Screensaver extends DreamService {
             if (prefs.is(Prefs.WEATHER, "on")) weather.refresh();
         }
 
+        @Override public boolean onKeyDown(int keyCode, android.view.KeyEvent event) {
+            ((Screensaver) getContext()).finish();
+            return true;
+        }
+
         private final Runnable weatherTick = new Runnable() {
             @Override public void run() {
                 if (prefs.is(Prefs.WEATHER, "on")) weather.refresh();
@@ -75,6 +82,7 @@ public final class Screensaver extends DreamService {
         @Override protected void onAttachedToWindow() {
             super.onAttachedToWindow();
             attached = true;
+            requestFocus();
             post(weatherTick);
         }
 

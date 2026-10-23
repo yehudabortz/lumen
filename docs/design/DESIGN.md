@@ -255,6 +255,7 @@ Selected rows in menus are near-white pills (94%) with dark text, as on a clean 
   versions use a small box blur on a downscaled copy.
 - **The screensaver** is a standard Android `DreamService`. Google TV hides third-party screensavers in its own
   settings, so setup sets it once with `settings put secure screensaver_components` (documented in the README).
+  Back or another remote key exits the screensaver and returns to Home.
 - **Memory target:** under 60 MB idle on Home. Artwork is decoded at card size; only the visible shelf is in memory.
   Measured on a 2022 Sony BRAVIA (3 GB RAM, Android 12), v0.2: 54 MB PSS with a shelf of artwork loaded; median
   frame 12 ms (60 fps), 0.4% of frames over deadline while navigating. Shadows are nine-slice bitmaps (one per
