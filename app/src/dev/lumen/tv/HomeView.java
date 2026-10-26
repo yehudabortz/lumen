@@ -724,7 +724,7 @@ final class HomeView extends View implements Overlays.Host {
     private void drawCredit(Canvas c, float appsT) {
         if (photoCredit == null || appsT > .99f) return;
         creditP.setAlpha(Math.round(Color.alpha(Ui.TEXT_3) * (1 - appsT)));
-        c.drawText(ellipsize(photoCredit, creditP, EDGE_R - EDGE_L - HINT_ROOM), EDGE_R, vh - 38, creditP);  // clears the All Apps hint
+        c.drawText(ellipsize(photoCredit, creditP, EDGE_R - Ui.W / 2f - HINT_ROOM / 2), EDGE_R, vh - 38, creditP);  // clears the All Apps hint
     }
 
     private void drawTopBar(Canvas c) {
@@ -837,7 +837,7 @@ final class HomeView extends View implements Overlays.Host {
     /** How far the page rises in All Apps, so the dock ends up at APPS_DOCK_TOP. */
     private float appsShift() { return dockBottom() - DOCK_H - APPS_DOCK_TOP; }
 
-    /** Bottom row: the All Apps hint on the left edge, the photo credit on the right, never overlapping. */
+    /** Bottom row: the All Apps hint centered, the photo credit on the right, never overlapping. */
     private static final float HINT_ROOM = 200;
 
     /**
@@ -959,7 +959,7 @@ final class HomeView extends View implements Overlays.Host {
         c.save();
         float bottom = dockBottom(), gridTop = bottom + 146, end = vh + appsShift();
         c.clipRect(0, bottom + 20, Ui.W, end);  // rows scrolling up slide under the dock
-        c.drawText("All Apps", EDGE_L, bottom + 120 - gridScroll.x, gridHeadP);
+        c.drawText("All Apps", LEFT, bottom + 120 - gridScroll.x, gridHeadP);  // lines up with the first column
         int focusedIdx = area == Area.GRID ? gridI : -1;
         for (int pass = 0; pass < 2; pass++) {  // focused tile last, so its shadow lies on top
             for (int i = 0; i < rest.size(); i++) {
@@ -1077,13 +1077,13 @@ final class HomeView extends View implements Overlays.Host {
         float a = (area == Area.ROW && !moving && apps != null && !apps.rest.isEmpty() ? 1 : 0) * Ui.clamp(4.6f - idle, 0, 1) * (1 - appsT);
         if (a <= 0) return;
         hintP.setAlpha(Math.round(Color.alpha(Ui.TEXT_3) * a));
-        float y = vh - 38;
-        c.drawText("All Apps", EDGE_L + 22, y, hintP);
+        float y = vh - 38, hl = Ui.W / 2f - (22 + hintP.measureText("All Apps")) / 2;  // chevron and label centered together
+        c.drawText("All Apps", hl + 22, y, hintP);
         stroke.setShader(null);
         stroke.setStrokeWidth(2.2f);
         stroke.setStrokeCap(Paint.Cap.ROUND);
         stroke.setColor(Ui.withAlpha(Ui.TEXT_3, a));
-        float hx = EDGE_L + 6, hy = y - 8;
+        float hx = hl + 6, hy = y - 8;
         c.drawLine(hx - 6, hy - 3, hx, hy + 3, stroke);
         c.drawLine(hx, hy + 3, hx + 6, hy - 3, stroke);
         if (idle < 4.7f) postInvalidateDelayed(120);  // fade it out, then stop drawing
