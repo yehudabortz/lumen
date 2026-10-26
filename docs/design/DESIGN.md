@@ -282,7 +282,7 @@ an interactive design reference; planned cinematic mode is not shown as a shippe
 | ![Settings](screens/settings.jpg) Settings dropdown from the status bar | ![Tile menu](screens/tile-menu.jpg) Tile menu (long-press OK) |
 | ![Continue Watching](screens/up-next.jpg) Continue Watching across sample apps | ![Top Picks focused](screens/top-picks.jpg) Focus in Top Picks |
 | ![All Apps](screens/all-apps.jpg) All Apps | ![Screensaver](screens/screensaver.jpg) Screensaver with a sample NASA Earth photo |
-| ![Forest by day](screens/forest-day.jpg) Forest by day | ![Dunes at dawn](screens/dunes-dawn.jpg) Dunes at dawn, Up Next |
+| ![Forest by day](screens/forest-day.jpg) Forest by day | ![Dunes at dawn](screens/dunes-dawn.jpg) Dunes at dawn, Continue Watching |
 | ![Coast by day](screens/coast-day.jpg) Coast by day | ![Quiet](screens/quiet.jpg) Quiet: Black, Top Shelf off |
 | ![Large cards](screens/large-cards.jpg) Top Shelf with Large cards | ![Compact cards](screens/compact-cards.jpg) Compact cards, title only |
 

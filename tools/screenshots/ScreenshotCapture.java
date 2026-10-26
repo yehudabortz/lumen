@@ -120,6 +120,9 @@ public final class ScreenshotCapture extends Instrumentation {
                 Weather weather = (Weather) field(saver[0], "weather");
                 weather.kind = "partly"; weather.temp = 68; weather.high = 73; weather.low = 59; weather.description = "Partly cloudy";
                 put(weather, "nextFetch", Long.MAX_VALUE);
+                // Discard any live forecast already in flight so it cannot replace the sample report
+                put(weather, "generation", (Integer) field(weather, "generation") + 1);
+                put(weather, "fetching", false);
                 saver[0].invalidate();
             });
             SystemClock.sleep(2000);
