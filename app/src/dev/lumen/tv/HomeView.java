@@ -82,12 +82,14 @@ final class HomeView extends View implements Overlays.Host {
     private String photoCredit;  // set while the background is a NASA photo
     private long photoAt;
 
-    // Focus and motion: springs carry velocity, so changing focus mid-move bends smoothly
+    // Focus and motion: springs carry velocity, so changing focus mid-move bends smoothly. Tuned for a TV remote: page moves
+    // land in about a quarter second, focus lifts faster still, and nothing creeps into place at the end.
     private Area area = Area.ROW;
     private int rowI, cardI, gridI;
     private boolean moving;
-    private final Spring appsS = new Spring(1.9f, .95f), rowScroll = new Spring(2.3f, 1f), cardScroll = new Spring(2.3f, 1f),
-            gridScroll = new Spring(2.3f, 1f), spec = new Spring(2.1f, .88f), barHide = new Spring(2.1f, 1f);
+    private static final float FOCUS_HZ = 3.4f, SCROLL_HZ = 2.9f, PAGE_HZ = 2.8f;
+    private final Spring appsS = new Spring(PAGE_HZ, 1f), rowScroll = new Spring(SCROLL_HZ, 1f), cardScroll = new Spring(SCROLL_HZ, 1f),
+            gridScroll = new Spring(SCROLL_HZ, 1f), spec = new Spring(2.7f, .86f), barHide = new Spring(PAGE_HZ, 1f);
     private final Map<Object, Spring> focus = new HashMap<>();
     private boolean returningHome = true, heartbeatArmed;
     private long lastFrame, lastKey, toastUntil, heartbeatEpoch = SystemClock.uptimeMillis();
@@ -253,7 +255,7 @@ final class HomeView extends View implements Overlays.Host {
 
     private void seedCurrentFocus() {
         Object selected = selectedFocusKey();
-        if (selected != null && !focus.containsKey(selected)) focus.put(selected, new Spring(2.8f, 1f).at(1));
+        if (selected != null && !focus.containsKey(selected)) focus.put(selected, new Spring(FOCUS_HZ, 1f).at(1));
     }
 
     private void settleFocus() {
@@ -664,7 +666,7 @@ final class HomeView extends View implements Overlays.Host {
         Spring sp = focus.get(key);
         if (sp == null) {
             if (!focused) return false;
-            focus.put(key, sp = reduced() ? new Spring(4.5f, 1f) : new Spring(2.8f, 1f));
+            focus.put(key, sp = reduced() ? new Spring(4.5f, 1f) : new Spring(FOCUS_HZ, 1f));
         }
         sp.target = focused ? 1 : 0;
         return sp.step(dt);
