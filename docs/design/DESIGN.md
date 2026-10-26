@@ -291,7 +291,8 @@ an interactive design reference; planned cinematic mode is not shown as a shippe
 | ![Continue Watching](screens/up-next.jpg) Continue Watching across sample apps | ![Top Picks focused](screens/top-picks.jpg) Focus in Top Picks |
 | ![All Apps](screens/all-apps.jpg) All Apps | ![Screensaver](screens/screensaver.jpg) Screensaver with a sample NASA Earth photo |
 | ![Horizon](screens/horizon.jpg) Horizon gradient | ![Sorbet](screens/sorbet.jpg) Sorbet gradient, Continue Watching |
-| ![Beam](screens/beam.jpg) Beam gradient | ![Quiet](screens/quiet.jpg) Quiet: Black, Top Shelf off |
+| ![Beam](screens/beam.jpg) Beam gradient | ![Aurora](screens/aurora.jpg) Aurora gradient |
+| ![Midnight](screens/midnight.jpg) Midnight gradient, Continue Watching | ![Quiet](screens/quiet.jpg) Quiet: Black, Top Shelf off |
 | ![Large cards](screens/large-cards.jpg) Top Shelf with Large cards | ![Compact cards](screens/compact-cards.jpg) Compact cards, title only |
 
 ![About settings](screens/about.jpg) About: creator credit and a wrapped privacy note inside the panel.
