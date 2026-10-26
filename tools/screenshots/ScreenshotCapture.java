@@ -86,24 +86,53 @@ public final class ScreenshotCapture extends Instrumentation {
             capture("tile-menu");
             key(KeyEvent.KEYCODE_BACK);
 
-            preference(Prefs.SHELF, "upnext");
+            rows("continue");
             runOnMainSync(view::reset);
             capture("up-next");
-            preference(Prefs.SHELF, "rich");
+            rows("picks");
             key(KeyEvent.KEYCODE_DPAD_UP);
             capture("top-picks");
             preference(Prefs.CARD_SIZE, "large"); capture("large-cards");
             preference(Prefs.CARD_SIZE, "compact"); preference(Prefs.CARD_TEXT, "title"); capture("compact-cards");
             preference(Prefs.CARD_SIZE, "standard"); preference(Prefs.CARD_TEXT, "details");
+
+            // Top Shelf rows: the title as a switcher, switching, Follow the dock, then the Rows pages of settings
+            rows("picks,continue,next,movies,short");
+            runOnMainSync(view::reset);
+            key(KeyEvent.KEYCODE_DPAD_UP); key(KeyEvent.KEYCODE_DPAD_UP);
+            capture("shelf-rows");
+            key(KeyEvent.KEYCODE_DPAD_RIGHT); key(KeyEvent.KEYCODE_DPAD_RIGHT); key(KeyEvent.KEYCODE_DPAD_RIGHT);
+            capture("shelf-movies");
+            preference(Prefs.SHELF_ROW, "picks");
+            preference(Prefs.FOLLOW, "on");
+            runOnMainSync(view::reset);
+            key(KeyEvent.KEYCODE_DPAD_RIGHT);
+            SystemClock.sleep(900);
+            capture("follow-dock");
+            preference(Prefs.FOLLOW, "off");
+            runOnMainSync(() -> ((Overlays) field(view, "overlays")).openPanel(Prefs.PAGE_ROWS));
+            capture("rows-settings");
+            for (int i = 0; i < 3; i++) key(KeyEvent.KEYCODE_DPAD_DOWN);
+            key(KeyEvent.KEYCODE_DPAD_CENTER);
+            capture("row-actions");
+            key(KeyEvent.KEYCODE_DPAD_CENTER); key(KeyEvent.KEYCODE_DPAD_UP);
+            capture("row-move");
+            key(KeyEvent.KEYCODE_DPAD_CENTER);
+            for (int i = 0; i < 6; i++) key(KeyEvent.KEYCODE_DPAD_DOWN);
+            key(KeyEvent.KEYCODE_DPAD_CENTER);
+            capture("add-row");
+            key(KeyEvent.KEYCODE_BACK);
+            rows("picks,continue,next");
+            preference(Prefs.SHELF_ROW, "picks");
             runOnMainSync(view::reset);
             key(KeyEvent.KEYCODE_DPAD_DOWN);
             capture("all-apps");
             runOnMainSync(view::reset);
 
             landscape("forest", Scene.DAY); capture("forest-day");
-            preference(Prefs.SHELF, "upnext");
+            rows("continue");
             landscape("dunes", Scene.DAWN); capture("dunes-dawn");
-            preference(Prefs.SHELF, "rich");
+            rows("picks");
             landscape("coast", Scene.DAY); capture("coast-day");
             preference(Prefs.SHELF, "off");
             landscape("black", Scene.DUSK); capture("quiet");
@@ -119,7 +148,7 @@ public final class ScreenshotCapture extends Instrumentation {
             SystemClock.sleep(2000);
             captureScreen("screensaver");
             result.putString("output", destination.getAbsolutePath());
-            result.putString("stream", "Captured 16 native Lumen screenshots with public sample content.\n");
+            result.putString("stream", "Captured 23 native Lumen screenshots with public sample content.\n");
             finish(Activity.RESULT_OK, result);
         } catch (Throwable error) {
             result.putString("stream", android.util.Log.getStackTraceString(error));
@@ -179,23 +208,57 @@ public final class ScreenshotCapture extends Instrumentation {
         JSONArray cards = fixtures.getJSONArray("cards");
         seedWallpaper(cards.getJSONObject(3), "home");
         seedWallpaper(cards.getJSONObject(2), "saver");
+        Uri[] art = new Uri[cards.length()];
         for (int i = 0; i < cards.length(); i++) {
             JSONObject card = cards.getJSONObject(i);
             File image = new File(getTargetContext().getFilesDir(), card.getString("asset"));
             try (InputStream in = getContext().getAssets().open(card.getString("asset")); FileOutputStream out = new FileOutputStream(image)) {
                 out.write(read(in));
             }
+            art[i] = Uri.fromFile(image);
+        }
+        // Fictional programs on the public sample photos, one or more for every row type. The first five keep
+        // the original cards (photo i on app i); the rest reuse photos for Up Next, Watchlist, live and short rows.
+        // title, photo, app, Watch Next type (-1 = a suggestion), program type, minutes, progress, live, line
+        Object[][] programs = {
+            {cards.getJSONObject(0).getString("title"), 0, 0, ShelfRows.NEXT_CONTINUE, ShelfRows.TYPE_EPISODE, 50, .64f, false, "S1 · E3 · 18 min left"},
+            {cards.getJSONObject(2).getString("title"), 2, 2, ShelfRows.NEXT_CONTINUE, ShelfRows.TYPE_EPISODE, 45, .28f, false, "S1 · E2 · 32 min left"},
+            {"Storm Season", 1, 1, ShelfRows.NEXT_CONTINUE, ShelfRows.TYPE_EPISODE, 42, .88f, false, "S3 · E1 · 5 min left"},
+            {"Night Shift Over Europe", 2, 3, ShelfRows.NEXT_NEXT, ShelfRows.TYPE_EPISODE, 44, 0f, false, "S2 · E5 · 44 min"},
+            {"The Long Glacier", 4, 4, ShelfRows.NEXT_NEW, ShelfRows.TYPE_EPISODE, 52, 0f, false, "S1 · E7 · New episode"},
+            {"Desert Crossing", 0, 1, ShelfRows.NEXT_WATCHLIST, ShelfRows.TYPE_MOVIE, 108, 0f, false, "Film · 1 h 48 min"},
+            {cards.getJSONObject(1).getString("title"), 1, 1, -1, ShelfRows.TYPE_MOVIE, 48, 0f, false, "Documentary · 48 min"},
+            {cards.getJSONObject(3).getString("title"), 3, 3, -1, ShelfRows.TYPE_MOVIE, 52, 0f, false, "Documentary · 52 min"},
+            {cards.getJSONObject(4).getString("title"), 4, 4, -1, ShelfRows.TYPE_SERIES, 0, 0f, false, "Series · 6 episodes"},
+            {"Ten-Minute Tides", 1, 0, -1, ShelfRows.TYPE_CLIP, 10, 0f, false, "Clip · 10 min"},
+            {"Reef Cam", 3, 0, -1, ShelfRows.TYPE_EVENT, 0, 0f, true, "Live now"},
+            {"Aurora Hunters", 2, 2, -1, ShelfRows.TYPE_SERIES, 0, 0f, false, "Series · 2 seasons"},
+        };
+        for (int i = 0; i < programs.length; i++) {
+            Object[] p = programs[i];
             ShelfStore.Item item = new ShelfStore.Item();
-            item.pkg = apps.row.get(i).pkg;
-            item.title = card.getString("title");
-            item.line = i == 0 ? "S1 · E3 · 18 min left" : i == 1 ? "Documentary · 48 min" : i == 2 ? "S1 · E2 · 32 min left" : "Documentary · 52 min";
-            item.intentUri = "https://images.nasa.gov/";
-            item.art = Uri.fromFile(image);
-            item.progress = i == 0 ? .64f : i == 2 ? .28f : 0;
-            item.watchNext = item.progress > 0;
+            item.title = (String) p[0];
+            item.art = art[(Integer) p[1]];
+            item.pkg = apps.row.get((Integer) p[2]).pkg;
+            item.nextType = (Integer) p[3];
+            item.watchNext = item.nextType >= 0;
+            item.type = (Integer) p[4];
+            item.duration = (Integer) p[5] * 60_000L;
+            item.progress = (Float) p[6];
+            item.live = (Boolean) p[7];
+            item.line = (String) p[8];
+            item.intentUri = "https://images.nasa.gov/#" + i;
             item.engaged = 100 - i;
             if (item.watchNext) shelf.upNext.add(item); else shelf.recommendations.add(item);
         }
+    }
+
+    /** Sets the Top Shelf's rows, first one on Home. */
+    private void rows(String ids) {
+        runOnMainSync(() -> {
+            preferences.edit().putString(Prefs.SHELF_ROWS, ids).remove(Prefs.SHELF_ROW).commit();
+            view.changed(Prefs.SHELF_ROWS);
+        });
     }
 
     /** Demo TV banner from the publisher's icon: preserve the logo's pixels and aspect ratio. */

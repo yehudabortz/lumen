@@ -36,6 +36,9 @@ final class Overlays {
         String weatherLine();      // "Partly cloudy · 62° · H 68° L 51°", or null
         String weatherKind();
         void redraw();
+        int rowCount(String id);      // items a Top Shelf row has right now
+        String rowTitle(String id);
+        List<String> appRows();       // "app:<package>" for every app with something for its own row
     }
 
     static final int NONE = 0, MENU = 1, PANEL = 2;
@@ -48,15 +51,21 @@ final class Overlays {
         Item(String label, String icon, String value, Runnable action) { this.label = label; this.icon = icon; this.value = value; this.action = action; }
     }
 
-    private static final int HEAD = 0, CHOICE = 1, PAGE = 2, TOGGLE = 3, NOTE = 4;
+    private static final int HEAD = 0, CHOICE = 1, PAGE = 2, TOGGLE = 3, NOTE = 4, ACTION = 5;
+
+    // Top Shelf rows pages: the list, one row's actions ("row:" + id), and the Add a row picker
+    private static final String ROW_PAGE = "row:", ADD_PAGE = "add";
 
     private static final class Row {
         final int kind;
         final String label, key;
         String value;
+        Runnable action;  // ACTION rows: what OK does
         android.text.StaticLayout note;
 
         Row(int kind, String label, String key, String value) { this.kind = kind; this.label = label; this.key = key; this.value = value; }
+
+        Row(String label, String key, String value, Runnable action) { this(ACTION, label, key, value); this.action = action; }
 
         boolean focusable() { return kind != HEAD && kind != NOTE; }
         float height() { return kind == NOTE ? Math.max(36, note.getHeight() + 12) : ROW; }
@@ -80,6 +89,8 @@ final class Overlays {
     private String page = null;  // null = main, or Prefs.PAGE_*
     private final List<Row> rows = new ArrayList<>();
     private int rowI;
+    private String held;  // the Top Shelf row being moved on the Rows page (Up/Down), or null
+
 
     private final Paint fill = new Paint(Paint.ANTI_ALIAS_FLAG), stroke = new Paint(Paint.ANTI_ALIAS_FLAG), glass = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
     private final android.text.TextPaint ellipsizeP = new android.text.TextPaint();
@@ -128,9 +139,13 @@ final class Overlays {
         host.redraw();
     }
 
-    void openPanel() {
+    void openPanel() { openPanel(null); }
+
+    /** Opens settings at a page (null for the main list), e.g. the Rows page from a long press on the shelf title. */
+    void openPanel(String at) {
         if (mode == MENU) open.at(0);
-        page = null;
+        page = at;
+        held = null;
         buildRows();
         rowI = firstFocusable();
         scroll.at(0);
@@ -179,6 +194,35 @@ final class Overlays {
             rows.add(new Row(HEAD, "About", null, null));
             rows.add(new Row(NOTE, "Lumen " + BuildInfo.VERSION + " · by Yehuda Bortz", null, null));
             rows.add(new Row(NOTE, "No ads, no tracking: the shelf shows only what your apps publish.", null, null));
+        } else if (Prefs.PAGE_ROWS.equals(page)) {
+            for (String id : p.rows()) {
+                String value = id.equals(held) ? "↑ ↓  Move · OK done" : countLabel(host.rowCount(id));
+                rows.add(new Row(PAGE, host.rowTitle(id), ROW_PAGE + id, value));
+            }
+            rows.add(new Row(PAGE, "Add a row", ADD_PAGE, ""));
+            rows.add(new Row(NOTE, "Home shows one row at a time. Press Up from the cards, then Left or Right to switch. "
+                    + "Rows with nothing in them right now are skipped.", null, null));
+        } else if (page.startsWith(ROW_PAGE)) {
+            final String id = page.substring(ROW_PAGE.length());
+            final List<String> ids = p.rows();
+            if (ids.size() > 1) {
+                rows.add(new Row("Move", "move", null, () -> { held = id; goPage(Prefs.PAGE_ROWS); }));
+                rows.add(new Row("Remove", "remove", null, () -> {
+                    List<String> now = host.prefs().rows();
+                    now.remove(id);
+                    host.prefs().rows(now);
+                    host.changed(Prefs.SHELF_ROWS);
+                    goPage(Prefs.PAGE_ROWS);
+                }));
+            }
+            rows.add(new Row(NOTE, ShelfRows.describe(id, this::appLabel) + " " + countSentence(host.rowCount(id))
+                    + (ids.size() > 1 ? "" : " It's your only row; turn the Top Shelf off to hide it."), null, null));
+        } else if (ADD_PAGE.equals(page)) {
+            List<String> chosen = p.rows();
+            addGroup("Your viewing", java.util.Arrays.asList(ShelfRows.VIEWING), chosen);
+            addGroup("Mixes", java.util.Arrays.asList(ShelfRows.MIXES), chosen);
+            addGroup("From an app", host.appRows(), chosen);
+            if (rows.isEmpty()) rows.add(new Row(NOTE, "Every row is already on your shelf.", null, null));
         } else if (Prefs.PAGE_HIDDEN.equals(page)) {
             List<AppStore.App> every = new ArrayList<>(apps.all);
             every.addAll(apps.hidden);
@@ -194,6 +238,37 @@ final class Overlays {
                     .setIncludePad(false).setLineSpacing(4, 1).build();
     }
 
+    /** A heading and one row per type not on the shelf yet; OK adds it at the end and returns to the list. */
+    private void addGroup(String heading, List<String> ids, List<String> chosen) {
+        List<Row> group = new ArrayList<>();
+        for (final String id : ids) {
+            if (chosen.contains(id)) continue;
+            int n = host.rowCount(id);
+            group.add(new Row(host.rowTitle(id), id, n == 0 ? "Empty now" : countLabel(n), () -> {
+                List<String> now = host.prefs().rows();
+                if (!now.contains(id)) now.add(id);
+                host.prefs().rows(now);
+                host.changed(Prefs.SHELF_ROWS);
+                goPage(Prefs.PAGE_ROWS);
+                for (int i = 0; i < rows.size(); i++) if ((ROW_PAGE + id).equals(rows.get(i).key)) { rowI = i; pill.at(i); }
+            }));
+        }
+        if (group.isEmpty()) return;
+        rows.add(new Row(HEAD, heading, null, null));
+        rows.addAll(group);
+    }
+
+    private String appLabel(String pkg) {
+        AppStore.App a = host.apps() == null ? null : host.apps().find(pkg);
+        return a == null ? null : a.label;
+    }
+
+    private static String countLabel(int n) { return n == 0 ? "Empty now" : n == 1 ? "1 item" : n + " items"; }
+
+    private static String countSentence(int n) {
+        return n == 0 ? "Nothing in it right now." : n == 1 ? "1 item right now." : n + " items right now.";
+    }
+
     void locationChanged() {
         for (Row row : rows) if (Prefs.PAGE_LOCATION.equals(row.key)) row.value = pageSummary(row.key);
         host.redraw();
@@ -207,6 +282,10 @@ final class Overlays {
         if (Prefs.PAGE_HIDDEN.equals(key)) {
             int n = host.apps().hidden.size();
             return n == 0 ? "None" : n + " hidden";
+        }
+        if (Prefs.PAGE_ROWS.equals(key)) {
+            int n = host.prefs().rows().size();
+            return n == 1 ? "1 row" : n + " rows";
         }
         int off = 0;
         for (AppStore.App a : host.apps().all) if (host.prefs().contains(Prefs.SHELF_OFF, a.pkg)) off++;
@@ -230,7 +309,9 @@ final class Overlays {
         if (e.getAction() != KeyEvent.ACTION_DOWN) return true;
         switch (code) {
             case KeyEvent.KEYCODE_BACK: case KeyEvent.KEYCODE_ESCAPE:
-                if (mode == PANEL && page != null) { goPage(null); }
+                if (mode == PANEL && held != null) drop();
+                else if (mode == PANEL && page != null && (page.startsWith(ROW_PAGE) || ADD_PAGE.equals(page))) goPage(Prefs.PAGE_ROWS);
+                else if (mode == PANEL && page != null) goPage(null);
                 else close();
                 return true;
             case KeyEvent.KEYCODE_DPAD_UP: step(-1); return true;
@@ -245,7 +326,9 @@ final class Overlays {
         if (mode == MENU) { items.get(itemI).action.run(); host.redraw(); return; }
         if (mode != PANEL || rows.isEmpty()) return;
         Row row = rows.get(rowI);
+        if (held != null) { drop(); return; }
         if (row.kind == CHOICE) side(1);
+        else if (row.kind == ACTION) row.action.run();
         else if (row.kind == PAGE) {
             if ("sources".equals(row.key)) host.sources();
             else if (Prefs.PAGE_LOCATION.equals(row.key)) host.chooseLocation();
@@ -258,6 +341,8 @@ final class Overlays {
         if (mode == MENU) {
             itemI = Math.max(0, Math.min(items.size() - 1, itemI + d));
             pill.target = itemI;
+        } else if (held != null) {
+            moveHeld(d);
         } else {
             int i = rowI + d;
             while (i >= 0 && i < rows.size() && !rows.get(i).focusable()) i += d;
@@ -299,6 +384,25 @@ final class Overlays {
         host.redraw();
     }
 
+    /** Moves the held Top Shelf row one place up or down and keeps it focused. */
+    private void moveHeld(int d) {
+        List<String> ids = host.prefs().rows();
+        int i = ids.indexOf(held), j = i + d;
+        if (i < 0 || j < 0 || j >= ids.size()) return;
+        java.util.Collections.swap(ids, i, j);
+        host.prefs().rows(ids);
+        host.changed(Prefs.SHELF_ROWS);
+        buildRows();
+        for (int k = 0; k < rows.size(); k++) if ((ROW_PAGE + held).equals(rows.get(k).key)) { rowI = k; pill.target = k; }
+    }
+
+    /** Puts the held row down where it is. */
+    private void drop() {
+        held = null;
+        buildRows();
+        host.redraw();
+    }
+
     private static AppStore.App findIn(List<AppStore.App> list, String pkg) {
         for (AppStore.App a : list) if (a.pkg.equals(pkg)) return a;
         return null;
@@ -309,7 +413,8 @@ final class Overlays {
         page = p;
         buildRows();
         rowI = firstFocusable();
-        if (p == null && from != null) for (int i = 0; i < rows.size(); i++) if (from.equals(rows.get(i).key)) rowI = i;
+        String back = held != null ? ROW_PAGE + held : from;  // returning: focus the row we came from
+        if (back != null) for (int i = 0; i < rows.size(); i++) if (back.equals(rows.get(i).key)) rowI = i;
         pill.at(rowI);
         scroll.at(0);
         host.redraw();
@@ -443,7 +548,9 @@ final class Overlays {
         c.save();
         c.clipRect(r);
         c.translate(0, top - scroll.x);
-        String title = page == null ? "Settings" : Prefs.PAGE_HIDDEN.equals(page) ? "Hidden apps" : "Apps in Top Shelf";
+        String title = page == null ? "Settings" : Prefs.PAGE_HIDDEN.equals(page) ? "Hidden apps"
+                : Prefs.PAGE_ROWS.equals(page) ? "Top Shelf rows" : ADD_PAGE.equals(page) ? "Add a row"
+                : page.startsWith(ROW_PAGE) ? host.rowTitle(page.substring(ROW_PAGE.length())) : "Apps in Top Shelf";
         titleP.setTextSize(34);
         titleP.setAlpha(255);
         c.drawText(title, x + IN, 28 + 34 * .73f, titleP);
@@ -472,7 +579,7 @@ final class Overlays {
             valueP.setColor(Ui.mix(Ui.TEXT_2, Color.argb(140, 0, 0, 0), f));
             String v = row.value == null ? "" : row.value;
             if (row.kind == CHOICE && f > .5f) v = "‹  " + v + "  ›";
-            else if (row.kind == PAGE) v = v + "  ›";
+            else if (row.kind == PAGE && !(held != null && (ROW_PAGE + held).equals(row.key))) v = v + "  ›";
             float valueWidth = w - 2 * IN - rowP.measureText(row.label) - 24;
             ellipsizeP.set(valueP);
             v = android.text.TextUtils.ellipsize(v, ellipsizeP,

@@ -21,6 +21,7 @@ import android.text.format.DateFormat;
 import android.view.KeyEvent;
 import android.view.View;
 
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
@@ -58,8 +59,10 @@ final class HomeView extends View implements Overlays.Host {
     private static final long HEARTBEAT_MS = 3400;
     private static final long HEARTBEAT_SETTLE_MS = 700;
 
-    private enum Area { ROW, SHELF, GRID, STATUS }  // STATUS: the clock-and-weather pill (settings)
-    private static final Object STATUS_KEY = new Object();
+    // STATUS: the clock-and-weather pill (settings); ROWS: the shelf title, a switcher between the user's rows
+    private enum Area { ROW, SHELF, ROWS, GRID, STATUS }
+    private static final Object STATUS_KEY = new Object(), ROWS_KEY = new Object();
+    private static final long FOLLOW_MS = 600;  // Follow the dock: how long a tile stays focused before its row shows
     private Area statusFrom = Area.ROW;
 
     private final Host host;
@@ -72,6 +75,13 @@ final class HomeView extends View implements Overlays.Host {
     private AppStore apps;
     private ShelfStore shelfData;
     private ShelfStore.Shelf shelf;
+    private final List<String> rowIds = new ArrayList<>();  // the user's rows that have something to show, in order
+    private int rowSel;                                     // which of them Home shows
+    private String followId;                                // a focused app's own row (Follow the dock), or null
+    private final ShelfRows.Labels labels = pkg -> {
+        AppStore.App a = apps == null ? null : apps.find(pkg);
+        return a == null ? null : a.label;
+    };
     private final ArtCache art;
     private final Weather weather;
 
@@ -87,7 +97,9 @@ final class HomeView extends View implements Overlays.Host {
     private int rowI, cardI, gridI;
     private boolean moving;
     private final Spring appsS = new Spring(1.9f, .95f), rowScroll = new Spring(2.3f, 1f), cardScroll = new Spring(2.3f, 1f),
-            gridScroll = new Spring(2.3f, 1f), spec = new Spring(2.1f, .88f), barHide = new Spring(2.1f, 1f);
+            gridScroll = new Spring(2.3f, 1f), spec = new Spring(2.1f, .88f), barHide = new Spring(2.1f, 1f),
+            rowSlide = new Spring(2.6f, 1f), stripScroll = new Spring(2.3f, 1f);
+    private int rowDir = 1;  // the side a newly chosen row slides in from
     private final Map<Object, Spring> focus = new HashMap<>();
     private boolean returningHome = true, heartbeatArmed;
     private long lastFrame, lastKey, toastUntil, heartbeatEpoch = SystemClock.uptimeMillis();
@@ -97,6 +109,7 @@ final class HomeView extends View implements Overlays.Host {
     // Paints and reusable geometry (nothing is allocated per frame on the common path)
     private final Paint fill = new Paint(Paint.ANTI_ALIAS_FLAG), stroke = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint bmp = new Paint(Paint.FILTER_BITMAP_FLAG | Paint.ANTI_ALIAS_FLAG), glassPaint = new Paint(Paint.FILTER_BITMAP_FLAG | Paint.ANTI_ALIAS_FLAG);
+    private final Paint stripOnP;  // the focused row name, dark on its white pill
     private final Paint creditP, clockP, dateP, wxP, headP, headAppP, titleP, metaP, labelP, labelDimP, hintP, gridHeadP, nameP, cardTitleP, toastP;
     private final RectF r = new RectF(), screenRect = new RectF(), srcRect = new RectF(), dock = new RectF();
     private final Matrix m = new Matrix(), sm = new Matrix();
@@ -147,6 +160,7 @@ final class HomeView extends View implements Overlays.Host {
         wxP.setTextAlign(Paint.Align.RIGHT);
         headP = Ui.text(Ui.semibold, 25, Ui.TEXT, -.02f);
         headAppP = Ui.text(Ui.medium, 25, Ui.TEXT_2, -.01f);
+        stripOnP = Ui.text(Ui.semibold, 25, Color.parseColor("#0c0c10"), -.02f);
         titleP = Ui.text(Ui.semibold, 22, Ui.TEXT, -.015f);
         metaP = Ui.text(Ui.medium, 20, Ui.TEXT_2, -.005f);
         labelP = Ui.text(Ui.semibold, 25, Ui.TEXT, -.015f);
@@ -218,6 +232,7 @@ final class HomeView extends View implements Overlays.Host {
         heartbeatEpoch = SystemClock.uptimeMillis() + HEARTBEAT_SETTLE_MS;
         appsS.target = 0;
         moving = false;
+        followId = null;
         refreshShelf();
         invalidate();
     }
@@ -245,6 +260,7 @@ final class HomeView extends View implements Overlays.Host {
 
     private Object selectedFocusKey() {
         if (area == Area.STATUS) return STATUS_KEY;
+        if (area == Area.ROWS) return ROWS_KEY;
         if (area == Area.ROW && apps != null && !apps.row.isEmpty()) return focusKey(apps.row.get(rowI));
         if (area == Area.GRID && apps != null && !apps.rest.isEmpty()) return focusKey(apps.rest.get(gridI));
         if (area == Area.SHELF && shelf != null && !shelf.items.isEmpty()) return focusKey(shelf.items.get(cardI));
@@ -266,25 +282,85 @@ final class HomeView extends View implements Overlays.Host {
     private void pruneFocus() {
         java.util.Set<Object> present = new java.util.HashSet<>();
         present.add(STATUS_KEY);
+        present.add(ROWS_KEY);
         if (apps != null) for (AppStore.App app : apps.all) present.add(focusKey(app));
         if (shelf != null) for (ShelfStore.Item item : shelf.items) present.add(focusKey(item));
         focus.keySet().retainAll(present);
     }
 
-    private void refreshShelf() {
-        if (shelfData == null) { shelf = null; return; }
+    /** Apps whose content never reaches the shelf: hidden ones and ones switched off for it. */
+    private java.util.Set<String> excluded() {
         java.util.Set<String> excluded = prefs.set(Prefs.SHELF_OFF);
         excluded.addAll(prefs.set(Prefs.HIDDEN));
-        Object selected = area == Area.SHELF ? selectedFocusKey() : null;
-        ShelfStore.Shelf next = shelfData.forHome(prefs.get(Prefs.SHELF), excluded);
-        if (next != shelf) {
-            shelf = next;
-            cardI = 0;
-            if (selected != null && shelf != null) for (int i = 0; i < shelf.items.size(); i++)
-                if (selected.equals(focusKey(shelf.items.get(i)))) { cardI = i; break; }
-            if (cardI == 0) cardScroll.at(0);
-            if (area == Area.SHELF && shelf == null) area = Area.ROW;
+        return excluded;
+    }
+
+    /**
+     * Rebuilds the shelf: the user's rows that have content, and the one on Home (the chosen row, or the focused
+     * app's own row under Follow the dock). Keeps the focused card when it is still there.
+     */
+    private void refreshShelf() {
+        rowIds.clear();
+        if (shelfData == null || prefs.is(Prefs.SHELF, "off")) {
+            shelf = null;
+            followId = null;
+            if (area == Area.SHELF || area == Area.ROWS) area = Area.ROW;
+            return;
         }
+        java.util.Set<String> excluded = excluded();
+        for (String id : prefs.rows()) if (shelfData.count(id, excluded) > 0) rowIds.add(id);
+        rowSel = Math.max(0, rowIds.indexOf(prefs.row()));
+        Object selected = area == Area.SHELF ? selectedFocusKey() : null;
+        ShelfStore.Shelf next = followId == null ? null : shelfData.row(followId, excluded, labels);
+        if (next == null) followId = null;
+        if (next == null && !rowIds.isEmpty()) next = shelfData.row(rowIds.get(rowSel), excluded, labels);
+        shelf = next;
+        int keep = 0;
+        if (selected != null && shelf != null) for (int i = 0; i < shelf.items.size(); i++)
+            if (selected.equals(focusKey(shelf.items.get(i)))) { keep = i; break; }
+        cardI = keep;
+        if (cardI == 0) cardScroll.at(0);
+        if ((area == Area.SHELF || area == Area.ROWS) && shelf == null) area = Area.ROW;
+        if (area == Area.ROWS && !hasRowChoice()) area = Area.SHELF;
+    }
+
+    /** Whether the shelf title offers anything to switch to. */
+    private boolean hasRowChoice() { return rowIds.size() > 1 || (followId != null && !rowIds.isEmpty()); }
+
+    /** Shows row i of the user's rows, sliding it in from the side it came from. */
+    private void chooseRow(int i) {
+        if (i < 0 || i >= rowIds.size() || (i == rowSel && followId == null)) return;
+        rowDir = followId != null ? 1 : Integer.signum(i - rowSel);
+        followId = null;
+        prefs.row(rowIds.get(i));
+        rowSlide.at(1);
+        rowSlide.target = 0;
+        refreshShelf();
+        cardI = 0;
+        cardScroll.at(0);
+        focusChanged();
+    }
+
+    private final Runnable follow = this::followDock;
+
+    /** Follow the dock: once a tile has stayed focused for FOLLOW_MS, the shelf shows that app's own row, if any. */
+    private void followDock() {
+        if (!prefs.is(Prefs.FOLLOW, "on") || shelfData == null || prefs.is(Prefs.SHELF, "off") || area != Area.ROW
+                || apps == null || apps.row.isEmpty() || moving || overlays.isOpen()) return;
+        String id = ShelfRows.APP_PREFIX + apps.row.get(rowI).pkg;
+        String want = shelfData.count(id, excluded()) > 0 ? id : null;
+        if (want == null ? followId == null : want.equals(followId)) return;
+        rowDir = 1;
+        followId = want;
+        rowSlide.at(1);
+        rowSlide.target = 0;
+        refreshShelf();
+        invalidate();
+    }
+
+    private void scheduleFollow() {
+        removeCallbacks(follow);
+        if (prefs.is(Prefs.FOLLOW, "on")) postDelayed(follow, FOLLOW_MS);
     }
 
     private boolean reduced() { return prefs.is(Prefs.MOTION, "reduced"); }
@@ -393,7 +469,7 @@ final class HomeView extends View implements Overlays.Host {
         } else if (area == Area.ROW) {
             if (dx != 0 && !row.isEmpty()) {
                 int n = Math.max(0, Math.min(row.size() - 1, rowI + dx));
-                if (n != rowI) { rowI = n; focusChanged(); }
+                if (n != rowI) { rowI = n; focusChanged(); scheduleFollow(); }
             }
             if (dy < 0 && shelf != null && !shelf.items.isEmpty()) { area = Area.SHELF; cardI = 0; focusChanged(); }
             else if (dy < 0) toStatus();
@@ -402,6 +478,10 @@ final class HomeView extends View implements Overlays.Host {
             int n = Math.max(0, Math.min(shelf.items.size() - 1, cardI + dx));
             if (n != cardI) { cardI = n; focusChanged(); }
             if (dy > 0) area = Area.ROW;
+            if (dy < 0) { if (hasRowChoice()) area = Area.ROWS; else toStatus(); }
+        } else if (area == Area.ROWS) {
+            if (dx != 0) chooseRow(followId != null ? rowSel : rowSel + dx);
+            if (dy > 0) { area = Area.SHELF; cardI = 0; cardScroll.at(0); focusChanged(); }
             if (dy < 0) toStatus();
         } else if (area == Area.STATUS) {
             if (dy > 0) area = statusFrom == Area.STATUS ? Area.ROW : statusFrom;
@@ -429,6 +509,7 @@ final class HomeView extends View implements Overlays.Host {
         if (apps == null) return;
         if (moving) { moving = false; showToast("Saved"); return; }
         if (area == Area.STATUS) { overlays.openPanel(); return; }
+        if (area == Area.ROWS) { area = Area.SHELF; cardI = 0; focusChanged(); return; }
         if (area == Area.ROW && !apps.row.isEmpty()) host.launch(apps.row.get(rowI));
         else if (area == Area.GRID && !apps.rest.isEmpty()) {
             host.launch(apps.rest.get(gridI));
@@ -438,9 +519,10 @@ final class HomeView extends View implements Overlays.Host {
         }
     }
 
-    /** Long-press OK: the tile menu (or settings, on Lumen's own tile). */
+    /** Long-press OK: the tile menu, or on the shelf title, the Rows page of settings. */
     private void longPress() {
         if (apps == null || moving) return;
+        if (area == Area.ROWS) { overlays.openPanel(Prefs.PAGE_ROWS); return; }
         if (area == Area.ROW && !apps.row.isEmpty()) overlays.openMenu(apps.row.get(rowI), true);
         else if (area == Area.GRID && !apps.rest.isEmpty()) {
             overlays.openMenu(apps.rest.get(gridI), false);
@@ -470,6 +552,12 @@ final class HomeView extends View implements Overlays.Host {
     @Override public void redraw() { invalidate(); }
 
     @Override public void panelOpened() { if (area != Area.STATUS) toStatus(); }
+
+    @Override public int rowCount(String id) { return shelfData == null ? 0 : shelfData.count(id, excluded()); }
+
+    @Override public String rowTitle(String id) { return ShelfRows.title(id, labels); }
+
+    @Override public List<String> appRows() { return shelfData == null ? new ArrayList<>() : shelfData.appRows(excluded()); }
 
     @Override public void sources() { Sources.show(getContext()); }
 
@@ -539,7 +627,8 @@ final class HomeView extends View implements Overlays.Host {
     @Override public void changed(String key) {
         switch (key) {
             case Prefs.BACKGROUND: case Prefs.TIME_OF_DAY: case Prefs.PHOTOS: renderScene(); break;
-            case Prefs.SHELF: case Prefs.SHELF_OFF: refreshShelf(); break;
+            case Prefs.SHELF: case Prefs.SHELF_OFF: case Prefs.SHELF_ROWS: refreshShelf(); break;
+            case Prefs.FOLLOW: followId = null; refreshShelf(); scheduleFollow(); break;
             case Prefs.CARD_SIZE: layoutShelf(); cardScroll.at(cardScrollTarget()); break;
             case Prefs.UNITS: case Prefs.PAGE_LOCATION: weather.refresh(); break;
             case Prefs.WEATHER: if (prefs.is(Prefs.WEATHER, "on")) weather.refresh(); break;
@@ -652,7 +741,8 @@ final class HomeView extends View implements Overlays.Host {
         }
         a |= ease(STATUS_KEY, area == Area.STATUS, dt);
         barHide.target = area == Area.GRID ? 1 : 0;  // keyed to focus, so Up to settings from a rowless grid still shows it
-        a |= barHide.step(dt) | spec.step(dt);
+        a |= ease(ROWS_KEY, area == Area.ROWS, dt);
+        a |= barHide.step(dt) | spec.step(dt) | rowSlide.step(dt) | stripScroll.step(dt);
         return a;
     }
 
@@ -794,12 +884,14 @@ final class HomeView extends View implements Overlays.Host {
         headP.setAlpha(Math.round(Color.alpha(Ui.TEXT) * alpha));
         headAppP.setAlpha(Math.round(Color.alpha(Ui.TEXT_2) * alpha));
         float left = shelfLeft();
-        String suffix = shelf.app != null ? " · " + shelf.app : " · across your apps";
-        c.drawText(shelf.heading, left, shelfTop + 25, headP);
-        c.drawText(suffix, left + headP.measureText(shelf.heading), shelfTop + 25, headAppP);
+        drawStrip(c, left, alpha);
+        // a newly chosen row slides in from its side and fades up (fade only with Reduced motion)
+        float slide = Ui.clamp(rowSlide.x, 0, 1);
+        a = Math.round(a * (1 - .85f * slide));
         // the focused card draws last, so its shadow lies over its neighbours
         int focusedIdx = area == Area.SHELF ? cardI : -1;
         c.save();
+        if (!reduced()) c.translate(rowDir * 140 * slide, 0);
         // cards end with the dock, not at the screen edge; the clip leaves room for the focus zoom, not the next card
         c.clipRect(EDGE_L - GAP + 2, -Ui.H, EDGE_R + GAP - 2, 2 * Ui.H);
         for (int i = 0; i < shelf.items.size(); i++) {
@@ -810,6 +902,57 @@ final class HomeView extends View implements Overlays.Host {
         }
         if (focusedIdx >= 0) drawCard(c, shelf.items.get(focusedIdx), left + focusedIdx * (cardW + GAP) - cardScroll.x, cardTop, a);
         c.restore();
+    }
+
+    /**
+     * The shelf title. With one row it is a plain heading; with several it lists them all, the shown one bright and
+     * the rest dim. Focused (Up from the cards), the shown name sits on a white pill and Left/Right switch rows.
+     * A Follow the dock row leads the list while it shows.
+     */
+    private void drawStrip(Canvas c, float left, float alpha) {
+        float y = shelfTop + 25;
+        List<String> names = new ArrayList<>();
+        if (followId != null) names.add(shelf.heading);
+        for (String id : rowIds) names.add(ShelfRows.title(id, labels));
+        int active = followId != null ? 0 : rowSel;
+        if (names.size() <= 1) {
+            c.drawText(shelf.heading, left, y, headP);
+            if (ShelfRows.PICKS.equals(shelf.id)) c.drawText(" · across your apps", left + headP.measureText(shelf.heading), y, headAppP);
+            return;
+        }
+        final float gap = 44, pad = 20;
+        float[] xs = new float[names.size()], ws = new float[names.size()];
+        float x = left;
+        for (int i = 0; i < names.size(); i++) {
+            xs[i] = x;
+            ws[i] = headP.measureText(names.get(i));  // one measure for all, so names don't shift as the choice moves
+            x += ws[i] + gap;
+        }
+        // keep the shown name on screen when the list is wider than the dock
+        float want = Math.max(0, Math.min(xs[active] - left, xs[active] + ws[active] - (EDGE_R - pad)));
+        if (active == 0) want = 0;
+        stripScroll.target = want;
+        if (stripScroll.x != stripScroll.target || stripScroll.v != 0) postInvalidateOnAnimation();
+        float f = Ui.clamp(focusOf(ROWS_KEY), 0, 1);
+        c.save();
+        c.clipRect(EDGE_L - pad - 8, -Ui.H, EDGE_R + pad + 8, 2 * Ui.H);
+        c.translate(-stripScroll.x, 0);
+        if (f > .01f) {  // the focused row name: a white capsule, as in the settings panel
+            r.set(xs[active] - pad, y - 33, xs[active] + ws[active] + pad, y + 13);
+            Shadow.draw(c, r, r.height() / 2, 12, 6, .35f * f * alpha, bmp);
+            fill.setShader(null);
+            fill.setColor(Color.argb(Math.round(240 * f * alpha), 255, 255, 255));
+            rrect(c, r, r.height() / 2, fill);
+        }
+        for (int i = 0; i < names.size(); i++) {
+            Paint p = i == active ? (f > .5f ? stripOnP : headP) : headAppP;
+            int base = i == active ? (f > .5f ? 255 : Color.alpha(Ui.TEXT)) : Color.alpha(Ui.TEXT_2);
+            p.setAlpha(Math.round(base * alpha));
+            c.drawText(names.get(i), xs[i], y, p);
+        }
+        c.restore();
+        headP.setAlpha(Math.round(Color.alpha(Ui.TEXT) * alpha));
+        headAppP.setAlpha(Math.round(Color.alpha(Ui.TEXT_2) * alpha));
     }
 
     /** Card geometry for the Card size setting. Large cards lift the shelf so their text clears the dock. */

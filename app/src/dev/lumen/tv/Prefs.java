@@ -11,7 +11,8 @@ import java.util.Set;
 final class Prefs {
     static final String BACKGROUND = "bg", TIME_OF_DAY = "tod", MOTION = "motion", SHELF = "shelf", LABELS = "labels",
             CLOCK = "clock", DATE = "date", WEATHER = "weather", UNITS = "units", PHOTOS = "photos", SAVER = "saver";
-    static final String CARD_SIZE = "cardSize", CARD_TEXT = "cardText";
+    static final String CARD_SIZE = "cardSize", CARD_TEXT = "cardText", FOLLOW = "follow";
+    static final String SHELF_ROWS = "shelfRows", SHELF_ROW = "shelfRow";  // the rows in order; the one on Home
     static final String HIDDEN = "hidden", SHELF_OFF = "shelfOff";
 
     /** One row of the settings panel. Pages open a list; choices cycle through values. */
@@ -26,7 +27,8 @@ final class Prefs {
         boolean isPage() { return values == null; }
     }
 
-    static final String PAGE_SHELF_APPS = "page:shelfApps", PAGE_HIDDEN = "page:hidden", PAGE_LOCATION = "page:location";
+    static final String PAGE_SHELF_APPS = "page:shelfApps", PAGE_HIDDEN = "page:hidden", PAGE_LOCATION = "page:location",
+            PAGE_ROWS = "page:rows";
 
     static final Option[] OPTIONS = {
         new Option("Appearance", BACKGROUND, "Background",
@@ -35,7 +37,9 @@ final class Prefs {
         new Option("Appearance", PHOTOS, "New photo", new String[]{"hour", "day"}, new String[]{"Every hour", "Every day"}),
         new Option("Appearance", TIME_OF_DAY, "Follow time of day", new String[]{"on", "off"}, new String[]{"On", "Off"}),
         new Option("Appearance", MOTION, "Motion", new String[]{"full", "reduced"}, new String[]{"Full", "Reduced"}),
-        new Option("Top Shelf", SHELF, "Top Shelf", new String[]{"rich", "upnext", "off"}, new String[]{"Top Picks for You", "Continue Watching", "Off"}),
+        new Option("Top Shelf", SHELF, "Top Shelf", new String[]{"on", "off"}, new String[]{"On", "Off"}),
+        new Option("Top Shelf", PAGE_ROWS, "Rows", null, null),
+        new Option("Top Shelf", FOLLOW, "Follow the dock", new String[]{"off", "on"}, new String[]{"Off", "On"}),
         new Option("Top Shelf", CARD_SIZE, "Card size", new String[]{"standard", "large", "compact"}, new String[]{"Standard", "Large", "Compact"}),
         new Option("Top Shelf", CARD_TEXT, "Card text", new String[]{"details", "title", "none"}, new String[]{"Title & details", "Title only", "None"}),
         new Option("Top Shelf", PAGE_SHELF_APPS, "Apps in Top Shelf", null, null),
@@ -67,7 +71,8 @@ final class Prefs {
 
     /** Whether a row applies right now (photo frequency only matters for a NASA photo background). */
     boolean relevant(Option o) {
-        if (CARD_SIZE.equals(o.key) || CARD_TEXT.equals(o.key)) return !is(SHELF, "off");
+        if (CARD_SIZE.equals(o.key) || CARD_TEXT.equals(o.key) || PAGE_ROWS.equals(o.key) || FOLLOW.equals(o.key)
+                || PAGE_SHELF_APPS.equals(o.key)) return !is(SHELF, "off");
         if (PHOTOS.equals(o.key)) return is(BACKGROUND, "nasa");
         return true;
     }
@@ -94,6 +99,24 @@ final class Prefs {
         i = (i + dir + o.values.length) % o.values.length;
         sp.edit().putString(key, o.values[i]).apply();
     }
+
+    /**
+     * The Top Shelf's rows, in order. Before rows existed the shelf was one choice: "upnext" becomes Continue
+     * Watching and Up Next, anything else the default rows.
+     */
+    java.util.List<String> rows() {
+        String saved = sp.getString(SHELF_ROWS, null);
+        if (saved != null) return ShelfRows.parse(saved);
+        if ("upnext".equals(sp.getString(SHELF, null))) return ShelfRows.parse(ShelfRows.CONTINUE + "," + ShelfRows.NEXT);
+        return new java.util.ArrayList<>(ShelfRows.DEFAULT);
+    }
+
+    void rows(java.util.List<String> ids) { sp.edit().putString(SHELF_ROWS, ShelfRows.join(ids)).apply(); }
+
+    /** The row last chosen on Home, or null for the first. */
+    String row() { return sp.getString(SHELF_ROW, null); }
+
+    void row(String id) { sp.edit().putString(SHELF_ROW, id).apply(); }
 
     Weather.Place city() {
         String saved = sp.getString("weatherCity", null);

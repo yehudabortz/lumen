@@ -38,6 +38,8 @@ jobs:
         run: ./build.sh
       - name: Scenic selection regressions
         run: sh tests/run-scenic-tests.sh
+      - name: Top Shelf row rules
+        run: sh tests/run-shelf-tests.sh
       - name: Check scripts and private-data policy
         run: |
           find . -name '*.sh' -not -path './out/*' -exec sh -n {} \;

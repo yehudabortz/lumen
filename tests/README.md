@@ -4,7 +4,10 @@ Build with `./build.sh`, then run the fast selection regressions:
 
 ```sh
 sh tests/run-scenic-tests.sh
+sh tests/run-shelf-tests.sh
 ```
+
+The second checks what each Top Shelf row type collects (Continue Watching, Movies, Short Watches, an app's own row and the rest) and how saved rows are read back.
 
 ## Android cache checks
 

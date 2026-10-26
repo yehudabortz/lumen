@@ -51,10 +51,18 @@ a browser. The arrow keys act as the D-pad, Enter as OK (hold it for the tile me
 ## Screens
 
 1. **Home.** Scene, weather and clock, the Top Shelf, the dock. Focus starts on the dock.
-2. **Top Shelf.** **Top Picks for You** mixes in-progress Watch Next items with recommendations from opted-in apps'
-   preview channels. In-progress items come first, then suggestions and additional Watch Next items are interleaved
-   across sources. Progress bars show where to resume. **Continue Watching** mode shows Watch Next
-   items across apps. Hidden apps and apps switched off in *Apps in Top Shelf* are excluded.
+2. **Top Shelf.** One row of cards at a time, from rows the user picks and orders (default: **Top Picks for You**,
+   **Continue Watching**, **Up Next**). With more than one row, the title lists them all: the one shown is bright, the
+   rest dim. Up from the cards focuses it (a white capsule); Left/Right switch rows, and the new row slides in from
+   that side (fades only with Reduced motion); Down or OK returns to the cards; long-press OK opens *Settings › Rows*.
+   Rows with nothing in them right now are skipped, and the last row chosen is remembered. Row types:
+   - *Your viewing:* Continue Watching, Up Next, New Episodes and Watchlist, from Watch Next's own types.
+   - *Mixes:* Top Picks (what you're watching interleaved with up to two suggestions per app), Movies, Shows, Live
+     Now, Almost Finished (75–98% watched) and Short Watches (30 minutes or less left).
+   - *From an app:* one app's Watch Next items, then its preview programs.
+   **Follow the dock** (off by default): resting on a dock tile for 0.6 s shows that app's own row, leading the
+   list in the title; moving to an app with nothing shows your chosen row again. Hidden apps and apps switched off
+   in *Apps in Top Shelf* are excluded everywhere.
 3. **Cinematic.** Up from the dock moves focus into the shelf. The focused item's artwork fills the screen behind a
    dark gradient, with the app name, the title, year · rating · genre, a two-line synopsis and *Resume*/*Play*.
    The dock slides away and the cards settle at the bottom. Back or Down returns home.
@@ -85,7 +93,10 @@ server.
   app's Watch Next items and preview programs marked searchable, which is the default. Without it Android shows only
   the launcher's own rows. Confirmed in the provider's source (`TvProvider.createSqlParams`).
 - **Top Picks order:** in-progress Watch Next items (newest engagement first), then recommendations interleaved
-  across app sources, then other Watch Next items. **Continue Watching** mode uses only Watch Next records across all enabled apps.
+  across app sources, then other Watch Next items. The other rows filter the same records by Watch Next type
+  (`WATCH_NEXT_TYPE_*`), program type (`TYPE_MOVIE`, series/season/episode), the live flag, and progress and
+  duration. Channel names are not used: reading other apps' channels needs a system permission. The row rules are
+  plain Java (`ShelfRows`) with JVM tests in `tests/ShelfRowsTest.java`.
 - **Opening an item** fires the program's intent URI, so it lands on that title inside its app.
 - **Per app:** every app can be turned off in *Apps in Top Shelf* or from its tile menu. Apps the user hid, or that
   are disabled, never appear.
@@ -209,7 +220,9 @@ Selected rows in menus are near-white pills (94%) with dark text, as on a clean 
 | | New photo | Every hour / Every day (only with photos) | **Every hour** |
 | | Follow time of day | On / Off | **On** |
 | | Motion | Full / Reduced (fades only; focus shown with an outline) | **Full** |
-| Top Shelf | Top Shelf | Top Picks for You / Continue Watching / Off | **Top Picks for You** |
+| Top Shelf | Top Shelf | On / Off | **On** |
+| | Rows | Ordered list; OK on a row: *Move* (Up/Down, OK to drop) or *Remove*; *Add a row* groups Your viewing, Mixes and From an app with live counts | **Top Picks, Continue Watching, Up Next** |
+| | Follow the dock | On / Off | **Off** |
 | | Cinematic artwork | On / Off (Off keeps the scene behind the hero text) | **On** |
 | | Card size | Standard (376×211) / Large (520×293, shelf lifts to clear the dock) / Compact (300×169) | **Standard** |
 | | Card text | Title & details / Title only / None | **Title & details** |
@@ -280,6 +293,10 @@ an interactive design reference; planned cinematic mode is not shown as a shippe
 | ![Forest by day](screens/forest-day.jpg) Forest by day | ![Dunes at dawn](screens/dunes-dawn.jpg) Dunes at dawn, Up Next |
 | ![Coast by day](screens/coast-day.jpg) Coast by day | ![Quiet](screens/quiet.jpg) Quiet: Black, Top Shelf off |
 | ![Large cards](screens/large-cards.jpg) Top Shelf with Large cards | ![Compact cards](screens/compact-cards.jpg) Compact cards, title only |
+| ![Row switcher](screens/shelf-rows.jpg) The shelf title as a row switcher | ![Movies row](screens/shelf-movies.jpg) Right three times: Movies |
+| ![Follow the dock](screens/follow-dock.jpg) Follow the dock: Prime Video's own row | ![Rows settings](screens/rows-settings.jpg) Settings › Top Shelf rows, with live counts |
+| ![Row actions](screens/row-actions.jpg) One row: Move or Remove, and what it collects | ![Moving a row](screens/row-move.jpg) Moving Movies up the list |
+| ![Add a row](screens/add-row.jpg) Add a row: Your viewing, Mixes, From an app | |
 
 ![About settings](screens/about.jpg) About: creator credit and a wrapped privacy note inside the panel.
 

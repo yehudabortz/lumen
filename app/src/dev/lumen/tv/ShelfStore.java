@@ -10,7 +10,6 @@ import android.net.Uri;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -24,12 +23,9 @@ import java.util.Set;
 final class ShelfStore {
     static final String PERMISSION = "android.permission.READ_TV_LISTINGS";
 
-    static final class Item {
-        String pkg, title, line, intentUri;
+    static final class Item extends ShelfRows.Program {
+        String line;
         Uri art;
-        float progress;       // 0..1, or 0 when there's nothing to resume
-        long engaged;         // last engagement, for ordering
-        boolean watchNext;
         private String stableFocusKey;
 
         String focusKey() {
@@ -39,10 +35,10 @@ final class ShelfStore {
     }
 
     static final class Shelf {
-        final String heading, app;  // e.g. "Continue Watching" · "Northfilm"; app is null for Up Next
+        final String id, heading;  // a ShelfRows id and its title, e.g. "movies" · "Movies"
         final List<Item> items;
 
-        Shelf(String heading, String app, List<Item> items) { this.heading = heading; this.app = app; this.items = items; }
+        Shelf(String id, String heading, List<Item> items) { this.id = id; this.heading = heading; this.items = items; }
     }
 
     /** Watch Next for every app, newest first: continue, then next episode, then watchlist. */
@@ -75,52 +71,16 @@ final class ShelfStore {
         return this;
     }
 
-    /** One relevance-sorted, interleaved shelf across every app the user left enabled. */
-    Shelf forHome(String mode, Set<String> off) {
-        if ("off".equals(mode)) return null;
-        List<Item> active = new ArrayList<>(), otherWatchNext = new ArrayList<>(), suggested = new ArrayList<>();
-        for (Item it : upNext) if (!off.contains(it.pkg)) {
-            if (it.progress > 0) active.add(it); else otherWatchNext.add(it);
-        }
-        List<Item> continuing = new ArrayList<>(active);
-        continuing.addAll(otherWatchNext);
-        if (!"upnext".equals(mode)) for (Item it : recommendations) if (!off.contains(it.pkg)) suggested.add(it);
-        List<Item> picks = new ArrayList<>();
-        Set<String> seen = new HashSet<>();
-        Map<String, List<Item>> bySource = new LinkedHashMap<>();
-        for (Item it : suggested) {
-            List<Item> source = bySource.get(it.pkg);
-            if (source == null) bySource.put(it.pkg, source = new ArrayList<>());
-            if (source.size() < 2) source.add(it);
-        }
-        List<List<Item>> sources = new ArrayList<>(bySource.values());
-        int[] sourceIndex = new int[sources.size()];
-        int nextIndex = 0, roundRobin = 0;
-        while (picks.size() < 24 && (nextIndex < continuing.size() || !sources.isEmpty())) {
-            if (nextIndex < continuing.size()) add(picks, seen, continuing.get(nextIndex++));
-            int source = -1, fallback = -1;
-            String lastPackage = picks.isEmpty() ? null : picks.get(picks.size() - 1).pkg;
-            for (int checked = 0; checked < sources.size(); checked++) {
-                int candidate = roundRobin++ % sources.size();
-                List<Item> items = sources.get(candidate);
-                if (sourceIndex[candidate] >= items.size()) continue;
-                if (fallback < 0) fallback = candidate;
-                if (lastPackage == null || !lastPackage.equals(items.get(sourceIndex[candidate]).pkg)) { source = candidate; break; }
-            }
-            if (source < 0) source = fallback;
-            if (source >= 0) add(picks, seen, sources.get(source).get(sourceIndex[source]++));
-            boolean hasMoreSuggestions = false;
-            for (int i = 0; i < sources.size(); i++) if (sourceIndex[i] < sources.get(i).size()) { hasMoreSuggestions = true; break; }
-            if (nextIndex >= continuing.size() && !hasMoreSuggestions) break;
-        }
-        if (picks.isEmpty()) return null;
-        return new Shelf("upnext".equals(mode) ? "Continue Watching" : "Top Picks for You", null, picks);
+    /** One row of the shelf, or null when it has nothing to show right now. */
+    Shelf row(String id, Set<String> off, ShelfRows.Labels labels) {
+        List<Item> items = ShelfRows.build(id, upNext, recommendations, off);
+        return items.isEmpty() ? null : new Shelf(id, ShelfRows.title(id, labels), items);
     }
 
-    private static void add(List<Item> picks, Set<String> seen, Item it) {
-        String key = it.pkg + "\u0000" + (it.intentUri == null ? it.title : it.intentUri);
-        if (seen.add(key)) picks.add(it);
-    }
+    int count(String id, Set<String> off) { return ShelfRows.build(id, upNext, recommendations, off).size(); }
+
+    /** Every app with something for its own row. */
+    List<String> appRows(Set<String> off) { return ShelfRows.appRows(upNext, recommendations, off); }
 
     private static void removeUnavailableApps(Context c, List<Item> items) {
         java.util.Iterator<Item> iterator = items.iterator();
@@ -144,11 +104,13 @@ final class ShelfStore {
             TvContract.WatchNextPrograms.COLUMN_EPISODE_DISPLAY_NUMBER, TvContract.WatchNextPrograms.COLUMN_INTENT_URI,
             TvContract.WatchNextPrograms.COLUMN_THUMBNAIL_URI, TvContract.WatchNextPrograms.COLUMN_POSTER_ART_URI,
             TvContract.WatchNextPrograms.COLUMN_LAST_PLAYBACK_POSITION_MILLIS, TvContract.WatchNextPrograms.COLUMN_DURATION_MILLIS,
+            TvContract.WatchNextPrograms.COLUMN_TYPE, TvContract.WatchNextPrograms.COLUMN_LIVE,
     };
 
     private static String[] withEngagement() {
-        String[] p = java.util.Arrays.copyOf(COLUMNS, COLUMNS.length + 1);
+        String[] p = java.util.Arrays.copyOf(COLUMNS, COLUMNS.length + 2);
         p[COLUMNS.length] = TvContract.WatchNextPrograms.COLUMN_LAST_ENGAGEMENT_TIME_UTC_MILLIS;
+        p[COLUMNS.length + 1] = TvContract.WatchNextPrograms.COLUMN_WATCH_NEXT_TYPE;
         return p;
     }
 
@@ -175,6 +137,10 @@ final class ShelfStore {
                 long dur = longOf(cur, col, TvContract.WatchNextPrograms.COLUMN_DURATION_MILLIS);
                 it.progress = pos > 0 && dur > 0 ? Math.min(1f, pos / (float) dur) : 0;
                 it.engaged = watchNext ? longOf(cur, col, TvContract.WatchNextPrograms.COLUMN_LAST_ENGAGEMENT_TIME_UTC_MILLIS) : 0;  // only when present
+                it.duration = dur;
+                it.nextType = intOf(cur, col, TvContract.WatchNextPrograms.COLUMN_WATCH_NEXT_TYPE);
+                it.type = intOf(cur, col, TvContract.WatchNextPrograms.COLUMN_TYPE);
+                it.live = intOf(cur, col, TvContract.WatchNextPrograms.COLUMN_LIVE) == 1;
                 it.line = line(cur, col, pos, dur);
                 out.add(it);
             }
@@ -214,6 +180,12 @@ final class ShelfStore {
     private static long longOf(Cursor c, Map<String, Integer> col, String name) {
         Integer i = col.get(name);
         return i == null || i < 0 || c.isNull(i) ? 0 : c.getLong(i);
+    }
+
+    /** An integer column, or -1 when the app left it unset. */
+    private static int intOf(Cursor c, Map<String, Integer> col, String name) {
+        Integer i = col.get(name);
+        return i == null || i < 0 || c.isNull(i) ? -1 : c.getInt(i);
     }
 
 }
