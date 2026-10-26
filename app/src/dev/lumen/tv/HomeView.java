@@ -937,7 +937,9 @@ final class HomeView extends View implements Overlays.Host {
 
         // specular rim, plus the highlight that glides to sit above the focused tile
         rim(c, dock, R_DOCK, DOCK_SMOOTH, 1);
-        spec.target = focusedIdx >= 0 && !row.isEmpty() ? x0 + focusedIdx * (TILE_W + GAP) + TILE_W / 2 : l + dockW / 2;
+        // stays above the dock's last selection when focus moves elsewhere, so nothing glides while the eye
+        // looks for the new focus; it only dims and softens (below)
+        spec.target = !row.isEmpty() ? x0 + Math.min(rowI, row.size() - 1) * (TILE_W + GAP) + TILE_W / 2 : l + dockW / 2;
         if (spec.x == 0) spec.at(spec.target);
         if (spec.x != spec.target || spec.v != 0) postInvalidateOnAnimation();  // the target is set after step(), so keep frames coming
         // with focus elsewhere the light dims to a third and spreads, so it reads as light on the glass rather than
