@@ -20,24 +20,12 @@
 
 ## Repository controls
 
-The desired `main` policy is recorded in [`.github/main-ruleset.json`](../.github/main-ruleset.json). It requires
-pull requests, the latest `Build and tests` and `Secret scan` checks, resolved conversations, squash merges and
-linear history. It prevents deletion and force pushes, with no routine administrator bypass. The review count
-is zero so a solo maintainer can merge their own passing PR; increase it when another reviewer is available.
-
-Apply and verify it with:
-
-```sh
-sh tools/security/apply-main-protection.sh yehudabortz/lumen
-```
-
-GitHub only permits private-repository protections on eligible paid plans. On a plan without that feature,
-the API returns 403: the file is a prepared policy, **not an enforced server-side protection**. Upgrade the plan
-and apply it before treating `main` as protected. This script never changes repository visibility or billing.
-Keep the repository private until the owner explicitly authorizes publication.
+Rules for `main` are managed in GitHub, under **Settings › Rules › Rulesets**, not in this repository; those
+settings are the only source of truth. Review them there, including which checks are required and who may
+bypass them. Keep the repository private until the owner explicitly authorizes publication.
 
 Use read-only default Actions tokens, disallow workflow approval of pull requests, pin actions to full commit
-SHAs, and retain only the merge methods supported by the ruleset. Enable dependency alerts and automated
+SHAs, and retain only the merge methods the `main` rules allow. Enable dependency alerts and automated
 security fixes where available. Hosted secret scanning/push protection and private vulnerability reporting
 should be enabled when the repository plan/visibility supports them; do not silently buy a paid feature.
 
