@@ -1,6 +1,6 @@
 # Lumen
 
-A clean, minimal home screen for **Android TV and Google TV**: your apps, recommendations, local weather and scenic NASA photos by default. No ads or API key.
+A clean, minimal home screen for **Android TV and Google TV**: your apps, recommendations, local weather and scenic NASA photos or grainy gradients. No ads or API key.
 
 ![Lumen home screen](docs/design/screens/home.jpg)
 
@@ -9,6 +9,15 @@ A clean, minimal home screen for **Android TV and Google TV**: your apps, recomm
 | ![Screensaver](docs/design/screens/screensaver.jpg) **Screensaver.** A NASA Earth photo with a large clock, the date and the weather. | ![Continue Watching](docs/design/screens/up-next.jpg) **Continue Watching.** Pick up where you left off, across your apps. |
 | ![Large cards](docs/design/screens/large-cards.jpg) **Your Top Shelf, your way.** Standard, Large or Compact cards. | ![All Apps](docs/design/screens/all-apps.jpg) **All Apps.** Everything in one grid, in the order you choose. |
 | ![Tile menu](docs/design/screens/tile-menu.jpg) **Long-press OK** to move an app, hide it or take it off the top row. | ![Settings](docs/design/screens/settings.jpg) **Settings** drop down from the clock without leaving Home. |
+
+### Backgrounds
+
+Pick a scenic NASA Earth photo or one of ten grainy gradients: Horizon, Sorbet, Beam, Ember, Aurora, Dusk, Lagoon, Midnight, Citrus and Rose. With **Follow time of day** on, the gradient tints rose at dawn, amber at dusk and darker at night.
+
+| | |
+|---|---|
+| ![Horizon gradient](docs/design/screens/horizon.jpg) **Horizon** | ![Sorbet gradient](docs/design/screens/sorbet.jpg) **Sorbet** |
+| ![Aurora gradient](docs/design/screens/aurora.jpg) **Aurora** | ![Midnight gradient](docs/design/screens/midnight.jpg) **Midnight** |
 
 ## Put it on your TV
 

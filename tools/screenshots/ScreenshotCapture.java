@@ -105,6 +105,9 @@ public final class ScreenshotCapture extends Instrumentation {
             landscape("sorbet", Scene.DAY); capture("sorbet");
             preference(Prefs.SHELF, "rich");
             landscape("beam", Scene.DAY); capture("beam");
+            landscape("aurora", Scene.DAY); capture("aurora");
+            preference(Prefs.SHELF, "upnext");
+            landscape("midnight", Scene.DAY); capture("midnight");
             preference(Prefs.SHELF, "off");
             landscape("black", Scene.DUSK); capture("quiet");
 
@@ -132,7 +135,7 @@ public final class ScreenshotCapture extends Instrumentation {
             waitForIdleSync();
             captureScreen("screensaver");
             result.putString("output", destination.getAbsolutePath());
-            result.putString("stream", "Captured 16 native Lumen screenshots with public sample content.\n");
+            result.putString("stream", "Captured 18 native Lumen screenshots with public sample content.\n");
             finish(Activity.RESULT_OK, result);
         } catch (Throwable error) {
             result.putString("stream", android.util.Log.getStackTraceString(error));
