@@ -4,6 +4,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.RectF;
 
 /** Small weather glyphs drawn with paths, centered on (cx, cy) with half-size `r`. */
 final class Glyphs {
@@ -113,17 +114,29 @@ final class Glyphs {
                 p.moveTo(cx, cy - h * .05f); p.lineTo(cx, cy + h * .4f);
                 p.moveTo(cx, cy - h * .38f); p.lineTo(cx, cy - h * .36f);
                 break;
-            default:  // gear
-                p.addCircle(cx, cy, h * .3f, Path.Direction.CW);
+            default: {  // gear: a cog outline, eight tapered teeth on a round body, with a hole in the middle
+                float root = h * .64f, tip = h * .86f;
+                RectF body = new RectF(cx - root, cy - root, cx + root, cy + root);
                 for (int i = 0; i < 8; i++) {
-                    double a = i * Math.PI / 4;
-                    float cs = (float) Math.cos(a), sn = (float) Math.sin(a);
-                    p.moveTo(cx + cs * h * .55f, cy + sn * h * .55f);
-                    p.lineTo(cx + cs * h * .82f, cy + sn * h * .82f);
+                    float a = i * 45 - 90;  // degrees, first tooth at the top
+                    point(p, cx, cy, root, a - 14, i == 0);
+                    point(p, cx, cy, tip, a - 9, false);
+                    point(p, cx, cy, tip, a + 9, false);
+                    point(p, cx, cy, root, a + 14, false);
+                    p.arcTo(body, a + 14, 17);  // the body between this tooth and the next
                 }
-                p.addCircle(cx, cy, h * .55f, Path.Direction.CW);
+                p.close();
+                p.addCircle(cx, cy, h * .27f, Path.Direction.CW);
                 break;
+            }
         }
         c.drawPath(p, stroke);
+    }
+
+    /** Moves or draws to the point at radius r and angle deg (clockwise from +x) around (cx, cy). */
+    private static void point(Path p, float cx, float cy, float r, float deg, boolean move) {
+        double a = Math.toRadians(deg);
+        float x = cx + r * (float) Math.cos(a), y = cy + r * (float) Math.sin(a);
+        if (move) p.moveTo(x, y); else p.lineTo(x, y);
     }
 }
