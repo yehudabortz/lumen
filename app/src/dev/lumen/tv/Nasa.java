@@ -298,6 +298,18 @@ final class Nasa {
         o.inJustDecodeBounds = false; o.inSampleSize = 1;
         while (o.outWidth / (o.inSampleSize * 2) >= w && o.outHeight / (o.inSampleSize * 2) >= h) o.inSampleSize *= 2;
         Bitmap b = BitmapFactory.decodeFile(f.getPath(), o);
-        return b == null ? null : Unsplash.crop(b, w, h);
+        return b == null ? null : crop(b, w, h);
     }
+    private static Bitmap crop(Bitmap src, int w, int h) {
+        if (src.getWidth() == w && src.getHeight() == h && src.isMutable()) return src;
+        float scale = Math.max(w / (float) src.getWidth(), h / (float) src.getHeight());
+        int cw = Math.round(w / scale), ch = Math.round(h / scale);
+        int cx = (src.getWidth() - cw) / 2, cy = (src.getHeight() - ch) / 2;
+        Bitmap out = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+        new android.graphics.Canvas(out).drawBitmap(src, new android.graphics.Rect(cx, cy, cx + cw, cy + ch),
+                new android.graphics.Rect(0, 0, w, h), new android.graphics.Paint(android.graphics.Paint.FILTER_BITMAP_FLAG));
+        src.recycle();
+        return out;
+    }
+
 }

@@ -31,6 +31,7 @@ final class Overlays {
         void appInfo(AppStore.App a);
         void changed(String key);  // a setting changed: apply it now
         void chooseLocation();
+        void sources();
         void panelOpened();        // focus moves to the clock-and-weather pill the dropdown hangs from
         String weatherLine();      // "Partly cloudy · 62° · H 68° L 51°", or null
         String weatherKind();
@@ -163,6 +164,7 @@ final class Overlays {
         Prefs p = host.prefs();
         AppStore apps = host.apps();
         if (page == null) {
+            rows.add(new Row(PAGE, "Weather by Open-Meteo", "sources", "CC BY 4.0"));
             String section = null;
             for (Prefs.Option o : Prefs.OPTIONS) {
                 if (!p.relevant(o)) continue;
@@ -241,7 +243,8 @@ final class Overlays {
         Row row = rows.get(rowI);
         if (row.kind == CHOICE) side(1);
         else if (row.kind == PAGE) {
-            if (Prefs.PAGE_LOCATION.equals(row.key)) host.chooseLocation();
+            if ("sources".equals(row.key)) host.sources();
+            else if (Prefs.PAGE_LOCATION.equals(row.key)) host.chooseLocation();
             else goPage(row.key);
         }
         else if (row.kind == TOGGLE) toggle(row);

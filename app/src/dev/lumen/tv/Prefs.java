@@ -29,8 +29,8 @@ final class Prefs {
 
     static final Option[] OPTIONS = {
         new Option("Appearance", BACKGROUND, "Background",
-                new String[]{"alpine", "forest", "dunes", "coast", "nasa", "unsplash", "graphite", "black"},
-                new String[]{"Alpine", "Forest", "Dunes", "Coast", "NASA photos", "Unsplash", "Graphite", "Black"}),
+                new String[]{"nasa", "alpine", "forest", "dunes", "coast", "graphite", "black"},
+                new String[]{"NASA photos", "Alpine", "Forest", "Dunes", "Coast", "Graphite", "Black"}),
         new Option("Appearance", PHOTOS, "New photo", new String[]{"hour", "day"}, new String[]{"Every hour", "Every day"}),
         new Option("Appearance", TIME_OF_DAY, "Follow time of day", new String[]{"on", "off"}, new String[]{"On", "Off"}),
         new Option("Appearance", MOTION, "Motion", new String[]{"full", "reduced"}, new String[]{"Full", "Reduced"}),
@@ -42,7 +42,7 @@ final class Prefs {
         new Option("Clock & Weather", WEATHER, "Weather", new String[]{"on", "off"}, new String[]{"On", "Off"}),
         new Option("Clock & Weather", PAGE_LOCATION, "Location", null, null),
         new Option("Clock & Weather", UNITS, "Units", new String[]{"auto", "f", "c"}, new String[]{"Auto", "°F", "°C"}),
-        new Option("Screensaver", SAVER, "Screensaver", new String[]{"nasa", "unsplash", "scene", "black"}, new String[]{"NASA photos", "Unsplash photos", "Landscape", "Black"}),
+        new Option("Screensaver", SAVER, "Screensaver", new String[]{"nasa", "scene", "black"}, new String[]{"NASA photos", "Landscape", "Black"}),
         new Option("Apps", PAGE_HIDDEN, "Hidden apps", null, null),
     };
 
@@ -58,21 +58,17 @@ final class Prefs {
     String get(String key) {
         Option o = option(key);
         String v = sp.getString(key, firstUsable(o));
-        for (String x : o.values) if (x.equals(v) && usable(x)) return v;
+        for (String x : o.values) if (x.equals(v)) return v;
         return firstUsable(o);
     }
 
-    /** Unsplash choices exist only when the build has an Unsplash key. */
-    static boolean usable(String value) { return !"unsplash".equals(value) || Unsplash.available(); }
-
-    /** Whether a row applies right now (photo frequency only matters for an Unsplash background). */
+    /** Whether a row applies right now (photo frequency only matters for a NASA photo background). */
     boolean relevant(Option o) {
-        if (PHOTOS.equals(o.key)) return is(BACKGROUND, "unsplash") || is(BACKGROUND, "nasa");
+        if (PHOTOS.equals(o.key)) return is(BACKGROUND, "nasa");
         return true;
     }
 
     private static String firstUsable(Option o) {
-        for (String x : o.values) if (usable(x)) return x;
         return o.values[0];
     }
 
@@ -91,7 +87,7 @@ final class Prefs {
         String v = get(key);
         int i = 0;
         while (i < o.values.length && !o.values[i].equals(v)) i++;
-        do i = (i + dir + o.values.length) % o.values.length; while (!usable(o.values[i]));
+        i = (i + dir + o.values.length) % o.values.length;
         sp.edit().putString(key, o.values[i]).apply();
     }
 

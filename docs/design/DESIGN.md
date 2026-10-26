@@ -44,7 +44,7 @@ a browser. The arrow keys act as the D-pad, Enter as OK (hold it for the tile me
 | Top Shelf | Heading at y = 262 px: **Top Picks for You**, 25 px SemiBold, then “across your apps” in 62% white. First card aligns to the floating dock's outer edge. Cards 376×211 px, radius 20, gap 28, with the episode/time line |
 | Dock | Glass (see Materials), centered, bottom edge at 81% of screen height. Padding 22 px; radius 42 px = tile radius + padding, so the curves are concentric |
 | Tiles | 16:9, radius 20 px. Medium 288×162 px (default, five across), Small 232×130 (six), Large 376×211 (four) |
-| Focus | Scale 1.09 (cards 1.07) over 240 ms, deep soft shadow and a low-contrast, static top-light sheen. Focused tiles and cards add a softly eased 0.4% double-beat pulse every 3.4 s; it starts only after D-pad navigation. Home restores stable focus by app/content identity at rest, without a zoom replay or entry pulse. Focus springs are critically damped. Reduced motion and open menus pause it. The dock's specular highlight slides to sit above the focused tile |
+| Focus | A close-fitting 2 px softly lit focus rim with a faint halo on apps and recommendation cards, plus scale 1.09 (cards 1.07) over 240 ms, deep soft shadow and a low-contrast, static top-light sheen. Focused tiles and cards add a softly eased 0.4% double-beat pulse every 3.4 s; it starts only after D-pad navigation. Home restores stable focus by app/content identity at rest, without a zoom replay or entry pulse. Focus springs are critically damped. Reduced motion and open menus pause it. The dock's specular highlight slides to sit above the focused tile |
 | Label | Focused tile only (default). 25 px SemiBold, 22 px under the dock |
 | Legibility | A dark vignette behind the clock and along the bottom, plus a soft band behind the shelf that strengthens on bright daytime scenes. During the All Apps scroll, a pre-blurred gradient sits above the moving dock and below the clock/date |
 
@@ -120,7 +120,7 @@ diagrams, simulations, and people-focused catalog entries, then fetches a return
 rendition. It does not ship a predefined NASA image list. Title and photographer or NASA center
 are read from that result's metadata and shown on screen. See [NASA photo behavior](../NASA-PHOTOS.md).
 
-- **Home:** rotates hourly or daily using **New photo**. NASA is an appearance option; Alpine remains the default.
+- **Home:** rotates hourly or daily using **New photo**. NASA is an appearance option; NASA is the fresh-install default; existing background choices are preserved.
 - **Screensaver:** NASA photos are the default for new preferences, rotating every five minutes. Existing explicit
   screensaver choices are preserved. Both views share the compressed disk cache, with separate rotation positions
   persisted across restarts. Each picture shows its title and creator credit.
@@ -136,19 +136,6 @@ are read from that result's metadata and shown on screen. See [NASA photo behavi
   blurred copies, with no added per-frame work. The dream holds at most two display bitmaps for a crossfade. Slow
   drift redraws at about 30 fps; Reduced motion stops drift and redraws once a second outside fades. Clock/date
   strings are formatted only when the minute or weather changes.
-
-## Unsplash photos (optional)
-
-Background and screensaver can use photos from [Unsplash](https://unsplash.com) instead of the drawn landscapes,
-through the official API: a random landscape photo for the query *desktop wallpaper*, with Unsplash's strict content
-filter. Following Unsplash's API guidelines, images are hotlinked from Unsplash's URLs, the photo's download
-endpoint is pinged when it's used, and "Photo by … on Unsplash" is shown small in a corner.
-
-- **Key:** each build needs its own free Unsplash access key, set as `unsplash.access_key=` in the git-ignored
-  `local.properties`. `build.sh` turns it into a generated class; without a key the Unsplash choices don't appear.
-- **Rate:** the home screen fetches a new photo every hour (or day); the screensaver every five minutes while it
-  runs. Both stay far below the 50 requests per hour of a new key.
-- **Offline:** the last photo is cached on the TV and shown until a new one arrives.
 
 ## Scenes (backgrounds)
 
@@ -218,7 +205,7 @@ Selected rows in menus are near-white pills (94%) with dark text, as on a clean 
 
 | Section | Option | Choices | Default |
 |---|---|---|---|
-| Appearance | Background | Alpine, Forest, Dunes, Coast, NASA photos, Unsplash (with a key), Graphite, Black | **Alpine** |
+| Appearance | Background | Alpine, Forest, Dunes, Coast, NASA photos, Graphite, Black | **NASA photos** |
 | | New photo | Every hour / Every day (only with photos) | **Every hour** |
 | | Follow time of day | On / Off | **On** |
 | | Motion | Full / Reduced (fades only; focus shown with an outline) | **Full** |
@@ -233,14 +220,14 @@ Selected rows in menus are near-white pills (94%) with dark text, as on a clean 
 | | Weather | On / Off | **On** |
 | | Location | City/postal-code search / Time zone (approx.) | **Time zone (approx.)** |
 | | Units | Auto / °F / °C | **Auto** |
-| Screensaver | Screensaver | NASA photos / Unsplash photos (with a key) / Landscape / Black | **NASA photos** |
+| Screensaver | Screensaver | NASA photos / Landscape / Black | **NASA photos** |
 | Apps | Hidden apps | List with toggles | none |
 | About | Version and creator credit (Yehuda Bortz), how to switch back to the original home screen | | |
 
 ## Technical shape (keeps it light)
 
 - **Java, no Gradle, no AndroidX, no third-party libraries.** `build.sh` runs aapt2 → javac → d8 → zipalign →
-  apksigner. Target APK size: under 400 KB, most of it the Inter subset.
+  apksigner. Target APK size: under 400 KB; no font assets or third-party libraries are currently bundled.
   Needs build-tools 35: d8 8.2 (build-tools 34) crashes on a file that has both an anonymous class and a lambda.
 - **minSdk 26 (Android 8), targetSdk 34** (current target, so Play Protect accepts the install).
 - **Components:** one activity (`HOME` + `LEANBACK_LAUNCHER`) and one `DreamService` (the screensaver).
@@ -292,3 +279,7 @@ an interactive design reference; planned cinematic mode is not shown as a shippe
 | ![Coast by day](screens/coast-day.jpg) Coast by day | ![Quiet](screens/quiet.jpg) Quiet: Black, Top Shelf off |
 
 ![About settings](screens/about.jpg) About: creator credit and a wrapped privacy note inside the panel.
+
+Weather attribution is a focusable source row next to the forecast in Settings, opening Open-Meteo, GeoNames and license links. The release has no Unsplash integration or embedded API keys. See [notices](../../NOTICE.md) and [privacy](../../PRIVACY.md).
+
+![Data sources](screens/sources.jpg) Weather and location attribution with accessible source/license links.

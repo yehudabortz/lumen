@@ -127,7 +127,7 @@ public final class Screensaver extends DreamService {
             load();
         }
 
-        /** The next image, off the main thread: a fresh Unsplash photo, the cached one, or a landscape. */
+        /** The next image, off the main thread: a NASA photo, its cached fallback, or a landscape. */
         private void load() {
             if (loading || getWidth() == 0) return;
             loading = true;
@@ -142,12 +142,6 @@ public final class Screensaver extends DreamService {
                             if (loading) loadAgain = true; else load();
                         }
                     });
-                    if (ph != null) { b = ph.bitmap; cr = ph.credit; }
-                }
-                if ("unsplash".equals(mode)) {
-                    Unsplash.Photo ph = null;
-                    try { ph = Unsplash.next(getContext(), "saver", w, h); } catch (Exception ignored) { }
-                    if (ph == null) ph = Unsplash.cached(getContext(), "saver", w, h);
                     if (ph != null) { b = ph.bitmap; cr = ph.credit; }
                 }
                 if (b == null && !"black".equals(mode)) {

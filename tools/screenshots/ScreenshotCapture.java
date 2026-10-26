@@ -42,6 +42,9 @@ public final class ScreenshotCapture extends Instrumentation {
         Bundle result = new Bundle();
         try {
             preferences = getTargetContext().getSharedPreferences("lumen", 0);
+            preferences.edit().clear().commit();
+            if (!new Prefs(getTargetContext()).is(Prefs.BACKGROUND, "nasa"))
+                throw new AssertionError("A fresh install must default to NASA photos");
             preferences.edit().clear().putString(Prefs.BACKGROUND, "nasa")
                     .putString(Prefs.TIME_OF_DAY, "off").putString(Prefs.DATE, "on")
                     .putString(Prefs.UNITS, "f").putString(Prefs.CLOCK, "12")
@@ -57,6 +60,8 @@ public final class ScreenshotCapture extends Instrumentation {
             activity = (HomeActivity) startActivitySync(intent);
             SystemClock.sleep(1800);
             view = (HomeView) field(activity, "view");
+            // Freeze the periodic time-of-day input while capturing explicit day/dawn fixture palettes.
+            runOnMainSync(() -> ((android.os.Handler) field(activity, "main")).removeCallbacks((Runnable) field(activity, "tick")));
             runOnMainSync(() -> { view.setApps(apps); view.setShelf(shelf); });
             verifyFocusRestore();
             waitForPhoto();
@@ -66,6 +71,10 @@ public final class ScreenshotCapture extends Instrumentation {
             capture("status");
             key(KeyEvent.KEYCODE_MENU);
             capture("settings");
+            key(KeyEvent.KEYCODE_DPAD_CENTER);
+            SystemClock.sleep(500);
+            captureScreen("sources");
+            key(KeyEvent.KEYCODE_BACK);
             for (int i = 0; i < 20; i++) key(KeyEvent.KEYCODE_DPAD_DOWN);
             capture("about");
             key(KeyEvent.KEYCODE_BACK);
@@ -107,7 +116,7 @@ public final class ScreenshotCapture extends Instrumentation {
             SystemClock.sleep(2000);
             captureScreen("screensaver");
             result.putString("output", destination.getAbsolutePath());
-            result.putString("stream", "Captured 13 native Lumen screenshots with public sample content.\n");
+            result.putString("stream", "Captured 14 native Lumen screenshots with public sample content.\n");
             finish(Activity.RESULT_OK, result);
         } catch (Throwable error) {
             result.putString("stream", android.util.Log.getStackTraceString(error));

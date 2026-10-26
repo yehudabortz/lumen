@@ -114,7 +114,7 @@
                   text-shadow: 0 2px 12px rgba(0,0,0,.35); }
   .card .meta span { display: block; font-size: 21px; font-weight: 500; color: var(--text-2); text-shadow: 0 2px 12px rgba(0,0,0,.35); }
   .card.focus .meta span { color: var(--text); }
-  .card.focus .pic { transform: scale(1.07); box-shadow: 0 26px 44px -14px rgba(0,0,0,.7), 0 8px 16px -6px rgba(0,0,0,.45); }
+  .card.focus .pic { outline: 2px solid rgba(255,255,255,.55); outline-offset: 1px; transform: scale(1.07); box-shadow: 0 26px 44px -14px rgba(0,0,0,.7), 0 8px 16px -6px rgba(0,0,0,.45); }
   .stage.heartbeat-armed:not(.busy) .card.focus .pic { animation: heartbeat 3400ms infinite; }
   .card.focus .meta { transform: translateY(8px); }
   .hero { position: absolute; left: 185px; top: 200px; width: 820px; opacity: 0; transform: translateY(16px); transition: opacity 400ms var(--ease), transform 400ms var(--ease); }
@@ -145,7 +145,7 @@
   .tile .art { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; display: flex; align-items: center; justify-content: center; }
   .tile .art::before { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 2;
                box-shadow: inset 0 0 0 1px rgba(255,255,255,.10), inset 0 1.5px 0 rgba(255,255,255,.22); }
-  .tile.focus { transform: scale(1.09); z-index: 2; box-shadow: 0 26px 44px -14px rgba(0,0,0,.65), 0 8px 16px -6px rgba(0,0,0,.4); }
+  .tile.focus { outline: 2px solid rgba(255,255,255,.55); outline-offset: 1px; transform: scale(1.09); z-index: 2; box-shadow: 0 26px 44px -14px rgba(0,0,0,.65), 0 8px 16px -6px rgba(0,0,0,.4); }
   .stage.heartbeat-armed:not(.busy) .tile.focus:not(.moving) { animation: heartbeat 3400ms infinite; }
   @keyframes heartbeat {
     0%, 6.5%, 21.8%, 26.5%, 44.7%, 100% { scale: 1; }
@@ -163,7 +163,7 @@
   .moving { animation: wiggle 260ms ease-in-out infinite alternate; }
   @keyframes wiggle { from { transform: scale(1.09) rotate(-1deg); } to { transform: scale(1.09) rotate(1deg); } }
   .reduced * { transition-duration: 120ms !important; animation: none !important; }
-  .reduced .tile.focus, .reduced .card.focus .pic { transform: none; outline: 3px solid rgba(255,255,255,.85); outline-offset: 5px; }
+  .reduced .tile.focus, .reduced .card.focus .pic { outline: 2px solid rgba(255,255,255,.55); outline-offset: 1px; transform: none; outline: 2px solid rgba(255,255,255,.65); outline-offset: 1px; }
 
   .hint { position: absolute; left: 0; right: 0; bottom: 38px; display: flex; justify-content: center; align-items: center; gap: 10px;
           font-size: 20px; font-weight: 500; color: var(--text-3); transition: opacity 600ms; }
@@ -316,7 +316,6 @@ function trees(r, pts, hMin, hMax, every, edgesOnly = false) {
 
 function scene(kind, palName, seed = 1, id = 's') {
   if (kind === 'nasa photos') return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080"><image href="https://images-assets.nasa.gov/image/carina_nebula/carina_nebula~large.jpg" width="1920" height="1080" preserveAspectRatio="xMidYMid slice"/><text x="1824" y="1042" text-anchor="end" fill="white" opacity=".65" font-family="sans-serif" font-size="17">Cosmic Cliffs in the Carina Nebula · NASA / ESA / CSA / STScI</text></svg>`;
-  if (kind === 'unsplash') kind = 'alpine';
   const p = PAL[palName], r = rng(seed);
   const sx = p.sx * W, sy = p.sy * H;
   let defs = `<linearGradient id="${id}sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${p.top}"/><stop offset=".55" stop-color="${p.mid}"/><stop offset="1" stop-color="${p.low}"/></linearGradient>
@@ -452,12 +451,12 @@ const TOP_PICKS = { title: 'Top Picks for You', items: [
 ] };
 
 /* ---------- State ---------- */
-const prefs = { Background: 'Alpine', 'Follow time of day': 'On', Motion: 'Full',
+const prefs = { Background: 'NASA photos', 'Follow time of day': 'On', Motion: 'Full',
   'Top Shelf': 'Top Picks for You', 'Cinematic artwork': 'On',
   'Tile size': 'Medium', Labels: 'On focus', Clock: 'System', 'Show date': 'Off', Weather: 'On', Units: 'Auto',
   Screensaver: 'NASA photos', 'Screensaver info': 'Clock & weather' };
 const OPTIONS = [
-  ['Appearance', 'Background', ['Alpine', 'Forest', 'Dunes', 'Coast', 'NASA photos', 'Unsplash', 'Graphite', 'Black']],
+  ['Appearance', 'Background', ['Alpine', 'Forest', 'Dunes', 'Coast', 'NASA photos', 'Graphite', 'Black']],
   ['Appearance', 'Follow time of day', ['On', 'Off']],
   ['Appearance', 'Motion', ['Full', 'Reduced']],
   ['Top Shelf', 'Top Shelf', ['Top Picks for You', 'Continue Watching', 'Off']],
@@ -470,7 +469,7 @@ const OPTIONS = [
   ['Clock & Weather', 'Weather', ['On', 'Off']],
   ['Clock & Weather', 'Location', ['Time zone (approx.)']],
   ['Clock & Weather', 'Units', ['Auto', '°F', '°C']],
-  ['Screensaver', 'Screensaver', ['NASA photos', 'Unsplash photos', 'Landscape', 'Black']],
+  ['Screensaver', 'Screensaver', ['NASA photos', 'Landscape', 'Black']],
   ['Screensaver', 'Screensaver info', ['Clock & weather', 'Clock', 'None']],
   ['Apps', 'Hidden apps', ['None']],
 ];
@@ -610,7 +609,7 @@ function renderPanel() {
     html += `<div class="opt ${i === s.panel.i ? 'focus' : ''}"><span>${name}</span><span class="v">${sub ? v + ' <span class="arw">›</span>' : '<span class="arw">‹</span>' + v + '<span class="arw">›</span>'}</span></div>`;
     y += 60;
   });
-  $('panelInner').innerHTML = html + '<h3>About</h3><div class="opt" style="color:var(--text-2);font-size:21px">Lumen 0.3 · by Yehuda Bortz</div><div style="font-size:21px;line-height:28px;padding:8px 24px;color:var(--text-3);overflow-wrap:break-word">No ads, no tracking: the shelf shows only what your apps publish.</div>';
+  $('panelInner').innerHTML = html + '<div class="opt"><a href="https://open-meteo.com/" style="color:inherit">Weather by Open-Meteo · CC BY 4.0</a></div><h3>About</h3><div class="opt" style="color:var(--text-2);font-size:21px">Lumen 0.3 · by Yehuda Bortz</div><div style="font-size:21px;line-height:28px;padding:8px 24px;color:var(--text-3);overflow-wrap:break-word">No ads, no tracking: the shelf shows only what your apps publish.</div>';
   $('panelInner').style.transform = `translateY(${-Math.max(0, focusY - 700)}px)`;  // keep the focused row in view
 }
 

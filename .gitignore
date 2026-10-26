@@ -9,3 +9,14 @@ out/
 local.properties
 
 .DS_Store
+
+# Private diagnostics and credentials
+.env
+.env.*
+!.env.example
+*.p12
+*.pfx
+tv-*.jpg
+tv-*.jpeg
+tv-*.png
+*.log

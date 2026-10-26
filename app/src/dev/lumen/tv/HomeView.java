@@ -70,7 +70,7 @@ final class HomeView extends View implements Overlays.Host {
     private Scene.Palette palette;
     private Bitmap scene, glassBlur, deepBlur;
     private boolean sceneBusy, sceneAgain;
-    private String photoCredit;  // set while the background is an Unsplash photo
+    private String photoCredit;  // set while the background is a NASA photo
     private long photoAt;
 
     // Focus and motion: springs carry velocity, so changing focus mid-move bends smoothly
@@ -194,7 +194,7 @@ final class HomeView extends View implements Overlays.Host {
     /** Called every 30 s by the activity: clock, weather, and the scene when the time-of-day palette changes. */
     void tick() {
         if (prefs.is(Prefs.WEATHER, "on")) weather.refresh();
-        if (prefs.is(Prefs.BACKGROUND, "unsplash") || prefs.is(Prefs.BACKGROUND, "nasa")) {
+        if (prefs.is(Prefs.BACKGROUND, "nasa")) {
             long every = prefs.is(Prefs.PHOTOS, "day") ? 24 * 3600_000L : 3600_000L;
             if (SystemClock.uptimeMillis() - photoAt > (photoCredit == null ? 60_000L : every)) renderScene();
         } else if (wantedPalette() != palette) renderScene();
@@ -307,15 +307,7 @@ final class HomeView extends View implements Overlays.Host {
                 });
                 if (ph != null) { sc = ph.bitmap; credit = ph.credit; }
             }
-            if ("unsplash".equals(k)) {  // the cached photo first; a fresh one when it's due
-                Unsplash.Photo ph = null;
-                if (Unsplash.age(getContext(), "home") > every) {
-                    try { ph = Unsplash.next(getContext(), "home", w, h); } catch (Exception ignored) { }
-                }
-                if (ph == null) ph = Unsplash.cached(getContext(), "home", w, h);
-                if (ph != null) { sc = ph.bitmap; credit = ph.credit; }
-            }
-            if (sc == null) sc = Scene.render(("unsplash".equals(k) || "nasa".equals(k)) ? "alpine" : k, p, 42, w, h);
+            if (sc == null) sc = Scene.render("nasa".equals(k) ? "alpine" : k, p, 42, w, h);
             Bitmap glass = Blur.blurred(sc, 240, 4), deep = Blur.blurred(sc, 120, 4);
             bright = credit != null ? luminance(deep) > .5f : Scene.isBright(p, k);
             legibility(sc, bright);
@@ -465,6 +457,8 @@ final class HomeView extends View implements Overlays.Host {
     @Override public void redraw() { invalidate(); }
 
     @Override public void panelOpened() { if (area != Area.STATUS) toStatus(); }
+
+    @Override public void sources() { Sources.show(getContext()); }
 
     @Override public void chooseLocation() {
         host.chooseLocation(() -> {
@@ -700,7 +694,7 @@ final class HomeView extends View implements Overlays.Host {
         return n == 0 ? 0 : sum / (255f * n);
     }
 
-    /** "Photo by … on Unsplash", small and quiet in the bottom-right corner, as Unsplash asks. */
+    /** The NASA title and creator credit, quietly in the bottom-right corner. */
     private void drawCredit(Canvas c, float appsT) {
         if (photoCredit == null || appsT > .99f) return;
         creditP.setAlpha(Math.round(Color.alpha(Ui.TEXT_3) * (1 - appsT)));
@@ -936,16 +930,10 @@ final class HomeView extends View implements Overlays.Host {
         Shadow.draw(c, r, R_TILE * sc, Ui.lerp(8, 18, fc), Ui.lerp(4, 18, fc), Ui.lerp(.28f, .55f, fc) * alpha, bmp);
         if (a.tile != null) drawBitmapRound(c, a.tile, r, R_TILE * sc, al);
         tileFinish(c, r, R_TILE * sc, f, al);
-        if (reduced() && f > .5f) {  // Reduced motion: focus shown with a ring instead of a zoom
-            stroke.setShader(null);
-            stroke.setStrokeWidth(3);
-            stroke.setColor(Color.argb(Math.round(220 * alpha), 255, 255, 255));
-            rrect(c, r.left - 6, r.top - 6, r.right + 6, r.bottom + 6, R_TILE + 6, stroke);
-        }
         c.restore();
     }
 
-    /** Static top-light sheen and hairline rim; focus motion comes from scale and shadow. */
+    /** Static top light and a soft, close-fitting focus rim shared by apps and recommendations. */
     private void tileFinish(Canvas c, RectF rr, float radius, float f, int alpha) {
         if (f > 0.01f) {
             fill.setColor(Color.WHITE);
@@ -960,6 +948,19 @@ final class HomeView extends View implements Overlays.Host {
         stroke.setAlpha(255);
         stroke.setColor(Color.argb(Math.round(28 * alpha / 255f), 255, 255, 255));
         rrect(c, rr.left + .6f, rr.top + .6f, rr.right - .6f, rr.bottom - .6f, radius, stroke);
+        float focused = Ui.clamp(f, 0, 1) * alpha / 255f;
+        if (focused > .01f) {
+            // A faint halo softens the edge without a detached, high-contrast border.
+            stroke.setStrokeWidth(6);
+            stroke.setColor(Color.argb(Math.round(22 * focused), 255, 255, 255));
+            rrect(c, rr.left - 1, rr.top - 1, rr.right + 1, rr.bottom + 1, radius + 1, stroke);
+            stroke.setStrokeWidth(2);
+            stroke.setColor(Color.WHITE);
+            unit(stroke, dockRimU, rr.top, rr.height(), Math.round(205 * focused));
+            rrect(c, rr.left - 1, rr.top - 1, rr.right + 1, rr.bottom + 1, radius + 1, stroke);
+            stroke.setShader(null);
+        }
+        stroke.setStrokeWidth(1.2f);
         stroke.setAlpha(255);
     }
 
