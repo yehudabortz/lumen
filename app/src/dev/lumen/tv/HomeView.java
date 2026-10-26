@@ -933,7 +933,7 @@ final class HomeView extends View implements Overlays.Host {
         c.restore();
     }
 
-    /** Static top light and a soft, close-fitting focus rim shared by apps and recommendations. */
+    /** Static top light and a crisp focus ring shared by apps and recommendations. */
     private void tileFinish(Canvas c, RectF rr, float radius, float f, int alpha) {
         if (f > 0.01f) {
             fill.setColor(Color.WHITE);
@@ -950,15 +950,9 @@ final class HomeView extends View implements Overlays.Host {
         rrect(c, rr.left + .6f, rr.top + .6f, rr.right - .6f, rr.bottom - .6f, radius, stroke);
         float focused = Ui.clamp(f, 0, 1) * alpha / 255f;
         if (focused > .01f) {
-            // A faint halo softens the edge without a detached, high-contrast border.
-            stroke.setStrokeWidth(6);
-            stroke.setColor(Color.argb(Math.round(22 * focused), 255, 255, 255));
-            rrect(c, rr.left - 1, rr.top - 1, rr.right + 1, rr.bottom + 1, radius + 1, stroke);
-            stroke.setStrokeWidth(2);
-            stroke.setColor(Color.WHITE);
-            unit(stroke, dockRimU, rr.top, rr.height(), Math.round(205 * focused));
-            rrect(c, rr.left - 1, rr.top - 1, rr.right + 1, rr.bottom + 1, radius + 1, stroke);
-            stroke.setShader(null);
+            stroke.setStrokeWidth(3);
+            stroke.setColor(Color.argb(Math.round(255 * focused), 255, 255, 255));
+            rrect(c, rr.left - 4, rr.top - 4, rr.right + 4, rr.bottom + 4, radius + 4, stroke);
         }
         stroke.setStrokeWidth(1.2f);
         stroke.setAlpha(255);
