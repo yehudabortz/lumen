@@ -340,7 +340,7 @@ final class Overlays {
      *   text 24 inside a row  ->  every label, title and heading sits 40 from the container's edge
      *   section heading: 24 above, 8 below; title block: 28 above the cap height
      */
-    private static final float PAD = Ui.MENU_PAD, IN = PAD + Ui.TEXT_INSET, ROW = Ui.ROW_H;
+    private static final float PAD = Ui.MENU_PAD, IN = PAD + Ui.TEXT_INSET, ROW = Ui.ROW_H, FADE_H = 64;
 
     private float baseline(Paint p, float rowTop, float rowH) { return rowTop + rowH / 2 + .36f * p.getTextSize(); }
 
@@ -426,12 +426,24 @@ final class Overlays {
         float w = 600, right = Ui.BAR_RIGHT, x = right - w, top = Ui.BAR_TOP + Ui.BAR_H + Ui.DROPDOWN_GAP;
         float h = Math.min(contentH, screenH - 48 - top), bottom = top + h;
 
+        // rows that scroll under the bottom edge pass beneath a soft fade; the focused row stays clear of it
+        float visible = h - (contentH > h ? FADE_H : PAD);
         if (!rows.isEmpty()) {  // keep the focused row in view
-            float rowTop = ys[rowI], rowBottom = rowTop + ROW, visible = h - PAD;
+            float rowTop = ys[rowI], rowBottom = rowTop + ROW;
             if (rowBottom - scroll.target > visible) scroll.target = rowBottom - visible;
             if (rowTop - scroll.target < head) scroll.target = Math.max(0, rowTop - head);
             if (rowI == firstFocusable()) scroll.target = 0;
             if (rowI == lastFocusable()) scroll.target = Math.max(0, contentH - h);  // reveal the notes below
+        }
+
+        // the pill runs ahead of the list's scroll; keep it inside the visible area, so it never dips under the
+        // bottom fade (or the title) while the list catches up
+        float pillY = 0;
+        if (!rows.isEmpty()) {
+            int lo = (int) Math.floor(Ui.clamp(pill.x, 0, rows.size() - 1)), hi = (int) Math.ceil(Ui.clamp(pill.x, 0, rows.size() - 1));
+            pillY = Ui.lerp(ys[lo], ys[hi], pill.x - lo);
+            if (pill.x != pill.target)  // only mid-move, so the scroll spring still settles on its own target
+                scroll.x = Math.min(Math.max(scroll.x, pillY + ROW - visible), Math.max(0, pillY - head));
         }
 
         // grows out of the gear chip, opaque early so it never looks ghostly mid-grow, and settles with the
@@ -458,10 +470,7 @@ final class Overlays {
             noteP.setColor(Ui.TEXT_2);
             c.drawText(wxLine, x + IN + 28 + 10, wy + .36f * noteP.getTextSize(), noteP);
         }
-        if (!rows.isEmpty()) {
-            int lo = (int) Math.floor(Ui.clamp(pill.x, 0, rows.size() - 1)), hi = (int) Math.ceil(Ui.clamp(pill.x, 0, rows.size() - 1));
-            drawPill(c, x + PAD, Ui.lerp(ys[lo], ys[hi], pill.x - lo), right - PAD, ROW, Ui.ROW_R, 1);
-        }
+        if (!rows.isEmpty()) drawPill(c, x + PAD, pillY, right - PAD, ROW, Ui.ROW_R, 1);
         for (int i = 0; i < rows.size(); i++) {
             Row row = rows.get(i);
             float ry = ys[i];
@@ -471,34 +480,48 @@ final class Overlays {
                 c.save(); c.translate(x + IN, ry + (row.height() - row.note.getHeight()) / 2);
                 row.note.draw(c); c.restore(); continue;
             }
-            float f = i == rowI ? Ui.clamp(1 - Math.abs(pill.x - i), 0, 1) : 0;
-            rowP.setColor(Ui.mix(Ui.TEXT, Color.parseColor("#0c0c10"), f));
-            c.drawText(row.label, x + IN, baseline(rowP, ry, ROW), rowP);
-            valueP.setColor(Ui.mix(Ui.TEXT_2, Color.argb(140, 0, 0, 0), f));
-            String v = row.value == null ? "" : row.value;
-            if (row.kind == CHOICE && f > .5f) v = "‹  " + v + "  ›";
-            else if (row.kind == PAGE) v = v + "  ›";
-            float valueWidth = w - 2 * IN - rowP.measureText(row.label) - 24;
-            ellipsizeP.set(valueP);
-            v = android.text.TextUtils.ellipsize(v, ellipsizeP,
-                    Math.max(0, valueWidth), android.text.TextUtils.TruncateAt.END).toString();
-            c.drawText(v, right - IN, baseline(valueP, ry, ROW), valueP);
+            drawRowText(c, row, i, x, right, w, ry, false);
+        }
+        // text turns dark exactly where the sliding pill covers it, so the pill is never a blank white bar mid-move
+        if (!rows.isEmpty()) {
+            c.save();
+            c.clipRect(x + PAD, pillY, right - PAD, pillY + ROW);
+            for (int i = 0; i < rows.size(); i++) {
+                Row row = rows.get(i);
+                if (row.kind != HEAD && row.kind != NOTE && ys[i] < pillY + ROW && ys[i] + ROW > pillY)
+                    drawRowText(c, row, i, x, right, w, ys[i], true);
+            }
+            c.restore();
         }
         c.restore();
         if (contentH > h) {  // soft fade where rows scroll under the bottom edge
             if (fade == null) fade = new LinearGradient(0, 0, 0, 1, 0x0022222A, Color.argb(210, 30, 30, 38), Shader.TileMode.CLAMP);
-            m.setScale(1, 64);
-            m.postTranslate(0, bottom - 64);
+            m.setScale(1, FADE_H);
+            m.postTranslate(0, bottom - FADE_H);
             fade.setLocalMatrix(m);
             fill.setShader(fade);
             c.save();
             c.clipPath(Ui.squircle(clipPath, r, Ui.MENU_R));
-            c.drawRect(x, bottom - 64, right, bottom, fill);
+            c.drawRect(x, bottom - FADE_H, right, bottom, fill);
             c.restore();
             fill.setShader(null);
         }
         if (fading) c.restore();
         c.restore();
+    }
+
+    private void drawRowText(Canvas c, Row row, int i, float x, float right, float w, float ry, boolean onPill) {
+        rowP.setColor(onPill ? Color.parseColor("#0c0c10") : Ui.TEXT);
+        c.drawText(row.label, x + IN, baseline(rowP, ry, ROW), rowP);
+        valueP.setColor(onPill ? Color.argb(140, 0, 0, 0) : Ui.TEXT_2);
+        String v = row.value == null ? "" : row.value;
+        if (row.kind == CHOICE && i == rowI && Math.abs(pill.x - i) < .5f) v = "‹  " + v + "  ›";
+        else if (row.kind == PAGE) v = v + "  ›";
+        float valueWidth = w - 2 * IN - rowP.measureText(row.label) - 24;
+        ellipsizeP.set(valueP);
+        v = android.text.TextUtils.ellipsize(v, ellipsizeP,
+                Math.max(0, valueWidth), android.text.TextUtils.TruncateAt.END).toString();
+        c.drawText(v, right - IN, baseline(valueP, ry, ROW), valueP);
     }
 
     /** Dark frosted glass: blurred backdrop, a charcoal tint so text stays crisp, a specular rim and a soft shadow. */
