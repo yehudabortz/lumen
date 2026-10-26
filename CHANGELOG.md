@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0
+
+- Top Shelf card size and card text options; the Labels setting also applies to All Apps.
+- Wider dock; the clock and weather hide in All Apps, and the dock's gradient overlay is gone.
+- Rearrange apps in All Apps. Left and Right now move across rows.
+- Top Shelf cards fade at the dock edge and slide off the real screen edge, so their shadows no longer get cut off.
+- Tighter motion timing across Home and the screensaver, plus a crossfade from the screensaver to Home.
+- The weather condition shows as a glyph in Settings and on the screensaver.
+- Refined Settings dropdown; the selection no longer flashes white as it moves.
+- The dock's highlight stays still and soft while focus is elsewhere.
+
 ## 0.3 — unreleased / experimental
 
 - Native Android TV home screen with drawn landscapes, clock, city-based weather and a glass app dock.
