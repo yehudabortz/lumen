@@ -11,6 +11,7 @@ import java.util.Set;
 final class Prefs {
     static final String BACKGROUND = "bg", TIME_OF_DAY = "tod", MOTION = "motion", SHELF = "shelf", LABELS = "labels",
             CLOCK = "clock", DATE = "date", WEATHER = "weather", UNITS = "units", PHOTOS = "photos", SAVER = "saver";
+    static final String CARD_SIZE = "cardSize", CARD_TEXT = "cardText";
     static final String HIDDEN = "hidden", SHELF_OFF = "shelfOff";
 
     /** One row of the settings panel. Pages open a list; choices cycle through values. */
@@ -35,6 +36,8 @@ final class Prefs {
         new Option("Appearance", TIME_OF_DAY, "Follow time of day", new String[]{"on", "off"}, new String[]{"On", "Off"}),
         new Option("Appearance", MOTION, "Motion", new String[]{"full", "reduced"}, new String[]{"Full", "Reduced"}),
         new Option("Top Shelf", SHELF, "Top Shelf", new String[]{"rich", "upnext", "off"}, new String[]{"Top Picks for You", "Continue Watching", "Off"}),
+        new Option("Top Shelf", CARD_SIZE, "Card size", new String[]{"standard", "large", "compact"}, new String[]{"Standard", "Large", "Compact"}),
+        new Option("Top Shelf", CARD_TEXT, "Card text", new String[]{"details", "title", "none"}, new String[]{"Title & details", "Title only", "None"}),
         new Option("Top Shelf", PAGE_SHELF_APPS, "Apps in Top Shelf", null, null),
         new Option("Top Row", LABELS, "Labels", new String[]{"focus", "always", "never"}, new String[]{"On focus", "Always", "Never"}),
         new Option("Clock & Weather", CLOCK, "Clock", new String[]{"system", "12", "24", "off"}, new String[]{"System", "12-hour", "24-hour", "Off"}),
@@ -64,6 +67,7 @@ final class Prefs {
 
     /** Whether a row applies right now (photo frequency only matters for a NASA photo background). */
     boolean relevant(Option o) {
+        if (CARD_SIZE.equals(o.key) || CARD_TEXT.equals(o.key)) return !is(SHELF, "off");
         if (PHOTOS.equals(o.key)) return is(BACKGROUND, "nasa");
         return true;
     }
