@@ -17,8 +17,6 @@ logs. Keep diagnostic files outside the repository and redact reports before sha
 before every commit. Git commit author information is public if the repository becomes public; choose your
 GitHub no-reply email if you do not want your personal email included.
 
-CI builds and scans pull requests using read-only permissions. Repository owners should apply the prepared
-[`main` ruleset](.github/main-ruleset.json) when the repository's GitHub plan supports it. The policy requires
-pull requests, current passing build/security checks, resolved conversations and linear history; it blocks
-force pushes and deletion. It permits solo-maintainer merges without requiring a second reviewer. See
+CI builds and scans pull requests using read-only permissions. Changes reach `main` through pull requests,
+under branch rules the repository owner manages in GitHub's settings. See
 [maintainer instructions](docs/MAINTAINING.md).

@@ -51,13 +51,13 @@ public final class Screensaver extends DreamService {
 
     static final class SaverView extends View {
         private static final long PHOTO_MS = 5 * 60_000L, CORNER_MS = 4 * 60_000L;
-        private static final long ENTRY_FADE_MS = 450, PHOTO_FADE_MS = 2500, DRIFT_MS = 90_000L;
+        private static final long ENTRY_FADE_MS = 450, PHOTO_FADE_MS = 2500, CORNER_FADE_MS = 600, DRIFT_MS = 90_000L;
 
         private final Prefs prefs;
         private final Weather weather;
         private Bitmap current, previous;
         private String credit;
-        private long shownAt, nextAt, fadeDuration = ENTRY_FADE_MS, started = SystemClock.uptimeMillis();
+        private long shownAt, firstShownAt, nextAt, fadeDuration = ENTRY_FADE_MS, started = SystemClock.uptimeMillis();
         private boolean loading, loadAgain;
         private boolean shownFirstImage;
         private final Random random = new Random();
@@ -158,6 +158,7 @@ public final class Screensaver extends DreamService {
                     current = fb;
                     credit = fcr;
                     shownAt = SystemClock.uptimeMillis();
+                    if (!shownFirstImage) firstShownAt = shownAt;
                     fadeDuration = shownFirstImage ? PHOTO_FADE_MS : ENTRY_FADE_MS;
                     shownFirstImage = true;
                     nextAt = shownAt + PHOTO_MS;
@@ -186,8 +187,9 @@ public final class Screensaver extends DreamService {
             c.restore();
             boolean reduced = prefs.is(Prefs.MOTION, "reduced");
             long cornerTime = (now - started) % CORNER_MS;
-            boolean fading = fade < 1 || cornerTime < 1200 || cornerTime > CORNER_MS - 1200;
-            postInvalidateDelayed(!reduced || fading ? 33 : 1000);
+            boolean fading = fade < 1 || cornerTime < CORNER_FADE_MS || cornerTime > CORNER_MS - CORNER_FADE_MS;
+            if (fading) postInvalidateOnAnimation();  // fades run at the display's full rate; the slow drift doesn't need it
+            else postInvalidateDelayed(reduced ? 1000 : 33);
         }
 
         /** Slow zoom-and-pan, back and forth over 90 s, so the picture never sits perfectly still. */
@@ -205,9 +207,11 @@ public final class Screensaver extends DreamService {
 
         /** Clock, date and weather in one corner, moving every few minutes; the credit sits in the opposite corner. */
         private void drawText(Canvas c, long now) {
-            int corner = (int) (((now - started) / CORNER_MS) % 4);  // 0 bottom-left, 1 bottom-right, 2 top-right, 3 top-left
+            // Starts top-right, where Home's clock sits, then 3 top-left, 0 bottom-left, 1 bottom-right
+            int corner = (int) (((now - started) / CORNER_MS + 2) % 4);  // 0 bottom-left, 1 bottom-right, 2 top-right, 3 top-left
             long into = (now - started) % CORNER_MS;
-            float a = Ui.clamp(Math.min(into, CORNER_MS - into) / 1200f, 0, 1);  // fade out and in when moving
+            float a = Ui.clamp(Math.min(into, CORNER_MS - into) / (float) CORNER_FADE_MS, 0, 1);  // fade out and in when moving
+            if (now - started < CORNER_MS / 2) a = firstShownAt == 0 ? 0 : Ui.clamp((now - firstShownAt) / (float) ENTRY_FADE_MS, 0, 1);  // first corner: in with the picture
             boolean right = corner == 1 || corner == 2, top = corner >= 2;
             boolean wx = prefs.is(Prefs.WEATHER, "on") && weather.ready();
             long minute = System.currentTimeMillis() / 60_000;
