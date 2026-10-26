@@ -39,13 +39,13 @@ final class Prefs {
         new Option("Top Shelf", CARD_SIZE, "Card size", new String[]{"standard", "large", "compact"}, new String[]{"Standard", "Large", "Compact"}),
         new Option("Top Shelf", CARD_TEXT, "Card text", new String[]{"details", "title", "none"}, new String[]{"Title & details", "Title only", "None"}),
         new Option("Top Shelf", PAGE_SHELF_APPS, "Apps in Top Shelf", null, null),
-        new Option("Top Row", LABELS, "Labels", new String[]{"focus", "always", "never"}, new String[]{"On focus", "Always", "Never"}),
         new Option("Clock & Weather", CLOCK, "Clock", new String[]{"system", "12", "24", "off"}, new String[]{"System", "12-hour", "24-hour", "Off"}),
         new Option("Clock & Weather", DATE, "Show date", new String[]{"off", "on"}, new String[]{"Off", "On"}),
         new Option("Clock & Weather", WEATHER, "Weather", new String[]{"on", "off"}, new String[]{"On", "Off"}),
         new Option("Clock & Weather", PAGE_LOCATION, "Location", null, null),
         new Option("Clock & Weather", UNITS, "Units", new String[]{"auto", "f", "c"}, new String[]{"Auto", "°F", "°C"}),
         new Option("Screensaver", SAVER, "Screensaver", new String[]{"nasa", "scene", "black"}, new String[]{"NASA photos", "Landscape", "Black"}),
+        new Option("Apps", LABELS, "Labels", new String[]{"focus", "always", "never"}, new String[]{"On focus", "Always", "Never"}),
         new Option("Apps", PAGE_HIDDEN, "Hidden apps", null, null),
     };
 
