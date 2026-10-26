@@ -24,7 +24,7 @@ generally not copyrighted in the United States, but third-party credits and exce
 
 - Home searches again hourly or daily, according to **New photo**.
 - The screensaver searches every five minutes.
-- Selecting NASA photos starts a search immediately. On a cold cache, Lumen keeps the landscape visible until
+- Selecting NASA photos starts a search immediately. On a cold cache, Lumen keeps a drawn gradient visible until
   the first result downloads, then replaces it with the NASA image.
 - Search and download run at background priority. Search metadata is capped at 512 KiB; each image is capped
   at 2 MiB and 1920 × 1280 pixels. The private cache retains at most six images and is shared by Home and the
@@ -37,4 +37,4 @@ photographer or NASA center field. The API metadata is the source for the label 
 
 The scenic policy uses a fresh cache namespace, so previously selected event or technical images are discarded
 on upgrade. Old cache files are removed by the background worker. Offline fallback remains the last good
-photo from the new scenic collection, or the drawn landscape while the first eligible photo loads.
+photo from the new scenic collection, or a drawn gradient while the first eligible photo loads.

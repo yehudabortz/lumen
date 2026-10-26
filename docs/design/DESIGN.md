@@ -1,7 +1,7 @@
 # Lumen — design
 
 A calm, clean and minimal home screen for Android TV and Google TV: your apps on a glass dock, what you're watching
-from those apps, the time and the weather, over a landscape that follows the time of day. No ads, ever.
+from those apps, the time and the weather, over a soft gradient or NASA photo that follows the time of day. No ads, ever.
 
 Status: **v0.3 implemented**, with cinematic mode, tile sizes and Inter still planned. The interactive mockup is [`mockup.html`](mockup.html): open it in
 a browser. The arrow keys act as the D-pad, Enter as OK (hold it for the tile menu), Esc as Back and S opens settings.
@@ -10,7 +10,7 @@ a browser. The arrow keys act as the D-pad, Enter as OK (hold it for the tile me
 
 1. **Your content, never ads.** Everything on screen comes from apps installed on the TV: what you were watching
    and what those apps suggest. Lumen talks to no ad, analytics or recommendation server, and has none of its own.
-2. **Calm, not empty.** A landscape, the time, your apps and one row of content. Nothing autoplays, nothing blinks.
+2. **Calm, not empty.** A soft background, the time, your apps and one row of content. Nothing autoplays, nothing blinks.
 3. **Remote first.** Everything works with the D-pad, OK and Back. Long-press OK is the only "advanced" gesture.
 4. **The default must be great.** A new user should never need settings. Options exist to refine, not to fix.
 5. **Light and boring to maintain.** One activity, plain Android views and Canvas, no libraries.
@@ -133,7 +133,7 @@ are read from that result's metadata and shown on screen. See [NASA photo behavi
   2 MiB temporary file). A single background-priority worker makes a bounded search and image request only when
   rotation is due. It atomically stores validated renditions. Failed requests retry after
   15 minutes; the last good image stays visible offline.
-- **Startup/offline:** disk decoding and downloads never run on the UI thread. A drawn landscape appears immediately
+- **Startup/offline:** disk decoding and downloads never run on the UI thread. A drawn gradient appears immediately
   on a cold cache, then the first downloaded photo replaces it. With cached photos, rotation works offline. Android
   may evict the cache under storage pressure; it is rebuilt on later use.
 - **Memory/rendering:** image inputs are limited to 1920 × 1280; displayed backdrops are capped at 1920 pixels wide.
@@ -144,20 +144,28 @@ are read from that result's metadata and shown on screen. See [NASA photo behavi
 
 ## Scenes (backgrounds)
 
-Landscapes drawn in code, so they cost no image files and no downloads and stay sharp at any resolution:
+Grainy gradients drawn in code, so they cost no image files and no downloads. Broad shapes of colour are painted at
+a fifth of 1080p, box-blurred into soft blends and stretched to the screen; film grain then gives them texture at
+full resolution, and the light-beam looks add a fine sparkle where the light falls:
 
 | Scene | What's in it |
 |---|---|
-| **Alpine** (default) | Four mountain ranges fading into haze, a pine shore, a lake with a soft reflection and a sun or moon glint, pines framing the edges |
-| **Forest** | Six tree-covered ridges with mist between them |
-| **Dunes** | Smooth layered dunes with a low sun |
-| **Coast** | A fjord: headlands dropping into a sea lit at the horizon |
+| **Horizon** | Bands of gold, coral and teal bending around a far corner into deep navy, heavy grain |
+| **Sorbet** | Sky blue, lilac, pink and orange running together, light grain |
+| **Beam** | Teal light falling from the top-right into black, with sparkle |
+| **Ember** | Warm orange light rising from the bottom-left, with sparkle |
+| **Aurora** | Green, blue and violet over midnight |
+| **Dusk** | Violet to rose to peach, banded around the bottom-right |
+| **Lagoon** | Blue, cyan and sea green |
+| **Midnight** | Soft indigo light from the top-left, with sparkle |
+| **Citrus** | Lemon, lime and orange |
+| **Rose** | Pink light from above into plum |
 | **Graphite** / **Black** | Plain, for the quietest setup (Black is OLED-friendly) |
 
-Each scene is lit by one of four palettes: **dawn**, **day**, **dusk**, **night** (stars and a crescent moon). With
-*Follow time of day* on, the palette changes with the clock, crossfading over a few minutes. Far ranges take on the
-horizon's color (atmospheric perspective); a 2% grain stops gradients from banding. The same scene generator makes
-the placeholder artwork in the mockup.
+With *Follow time of day* on, the clock tones the gradient: a rose wash at dawn, as designed by day, amber and a
+little darker at dusk, a deep blue dim at night. Off, it stays as designed. Saved Alpine, Forest, Dunes and Coast
+choices from 1.0 move to Midnight, Aurora, Horizon and Lagoon. The mockup still uses the older landscape generator
+for its placeholder artwork.
 
 ## Geometry: corners and spacing
 
@@ -210,7 +218,7 @@ Selected rows in menus are near-white pills (94%) with dark text, as on a clean 
 
 | Section | Option | Choices | Default |
 |---|---|---|---|
-| Appearance | Background | Alpine, Forest, Dunes, Coast, NASA photos, Graphite, Black | **NASA photos** |
+| Appearance | Background | NASA photos, Horizon, Sorbet, Beam, Ember, Aurora, Dusk, Lagoon, Midnight, Citrus, Rose, Graphite, Black | **NASA photos** |
 | | New photo | Every hour / Every day (only with photos) | **Every hour** |
 | | Follow time of day | On / Off | **On** |
 | | Motion | Full / Reduced (fades only; focus shown with an outline) | **Full** |
@@ -226,7 +234,7 @@ Selected rows in menus are near-white pills (94%) with dark text, as on a clean 
 | | Weather | On / Off | **On** |
 | | Location | City/postal-code search / Time zone (approx.) | **Time zone (approx.)** |
 | | Units | Auto / °F / °C | **Auto** |
-| Screensaver | Screensaver | NASA photos / Landscape / Black | **NASA photos** |
+| Screensaver | Screensaver | NASA photos / Gradients / Black | **NASA photos** |
 | Apps | Labels | On focus / Always / Never (dock and All Apps) | **On focus** |
 | | Hidden apps | List with toggles | none |
 | About | Version and creator credit (Yehuda Bortz), how to switch back to the original home screen | | |
@@ -239,7 +247,7 @@ Selected rows in menus are near-white pills (94%) with dark text, as on a clean 
 - **minSdk 26 (Android 8), targetSdk 34** (current target, so Play Protect accepts the install).
 - **Components:** one activity (`HOME` + `LEANBACK_LAUNCHER`) and one `DreamService` (the screensaver).
   Classes: `HomeActivity`, `AppStore` (apps, installs/removals), `ShelfStore` (TV provider queries, change
-  observer), `ArtCache`, `Weather`, `Scene` (the landscape generator), `Glass`, `TileView`, `CardView`, `TileMenu`,
+  observer), `ArtCache`, `Weather`, `Scene` (the gradient generator), `Glass`, `TileView`, `CardView`, `TileMenu`,
   `SettingsPanel`, `Screensaver`, `Prefs`.
 - **Permissions, and why:** `INTERNET` (artwork the apps point to, and the weather), `READ_TV_LISTINGS` (the shelf;
   asked once, and the shelf simply hides if declined). Nothing else: no location, no storage, no accessibility
@@ -282,8 +290,8 @@ an interactive design reference; planned cinematic mode is not shown as a shippe
 | ![Settings](screens/settings.jpg) Settings dropdown from the status bar | ![Tile menu](screens/tile-menu.jpg) Tile menu (long-press OK) |
 | ![Continue Watching](screens/up-next.jpg) Continue Watching across sample apps | ![Top Picks focused](screens/top-picks.jpg) Focus in Top Picks |
 | ![All Apps](screens/all-apps.jpg) All Apps | ![Screensaver](screens/screensaver.jpg) Screensaver with a sample NASA Earth photo |
-| ![Forest by day](screens/forest-day.jpg) Forest by day | ![Dunes at dawn](screens/dunes-dawn.jpg) Dunes at dawn, Continue Watching |
-| ![Coast by day](screens/coast-day.jpg) Coast by day | ![Quiet](screens/quiet.jpg) Quiet: Black, Top Shelf off |
+| ![Horizon](screens/horizon.jpg) Horizon gradient | ![Sorbet](screens/sorbet.jpg) Sorbet gradient, Continue Watching |
+| ![Beam](screens/beam.jpg) Beam gradient | ![Quiet](screens/quiet.jpg) Quiet: Black, Top Shelf off |
 | ![Large cards](screens/large-cards.jpg) Top Shelf with Large cards | ![Compact cards](screens/compact-cards.jpg) Compact cards, title only |
 
 ![About settings](screens/about.jpg) About: creator credit and a wrapped privacy note inside the panel.

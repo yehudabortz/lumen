@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- The drawn backgrounds are now ten grainy gradients (Horizon, Sorbet, Beam, Ember, Aurora, Dusk, Lagoon, Midnight,
+  Citrus, Rose) in place of the Alpine, Forest, Dunes and Coast landscapes. A saved landscape moves to the nearest
+  gradient, and the screensaver's fallback option is now called Gradients.
+
 ## 1.0
 
 - Top Shelf card size and card text options; the Labels setting also applies to All Apps.

@@ -288,7 +288,7 @@ final class HomeView extends View implements Overlays.Host {
     private boolean reduced() { return prefs.is(Prefs.MOTION, "reduced"); }
 
     private Scene.Palette wantedPalette() {
-        return prefs.is(Prefs.TIME_OF_DAY, "on") ? Scene.forTime(Calendar.getInstance()) : Scene.DUSK;
+        return prefs.is(Prefs.TIME_OF_DAY, "on") ? Scene.forTime(Calendar.getInstance()) : Scene.DAY;
     }
 
     @Override protected void onSizeChanged(int w, int h, int ow, int oh) {
@@ -318,7 +318,7 @@ final class HomeView extends View implements Overlays.Host {
                 });
                 if (ph != null) { sc = ph.bitmap; credit = ph.credit; }
             }
-            if (sc == null) sc = Scene.render("nasa".equals(k) ? "alpine" : k, p, 42, w, h);
+            if (sc == null) sc = Scene.render("nasa".equals(k) ? "horizon" : k, p, 42, w, h);
             Bitmap glass = Blur.blurred(sc, 240, 4), deep = Blur.blurred(sc, 120, 4);
             bright = credit != null ? luminance(deep) > .5f : Scene.isBright(p, k);
             legibility(sc, bright);

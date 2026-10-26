@@ -161,7 +161,7 @@ public final class Screensaver extends DreamService {
             load();
         }
 
-        /** The next image, off the main thread: a NASA photo, its cached fallback, or a landscape. */
+        /** The next image, off the main thread: a NASA photo, its cached fallback, or an abstract look. */
         private void load() {
             if (loading || getWidth() == 0) return;
             loading = true;
@@ -179,8 +179,7 @@ public final class Screensaver extends DreamService {
                     if (ph != null) { b = ph.bitmap; cr = ph.credit; }
                 }
                 if (b == null && !"black".equals(mode)) {
-                    String[] kinds = {"alpine", "forest", "dunes", "coast"};
-                    b = Scene.render(kinds[random.nextInt(kinds.length)], Scene.forTime(Calendar.getInstance()), random.nextInt(1000), w, h);
+                    b = Scene.render(Scene.KINDS[random.nextInt(Scene.KINDS.length)], Scene.forTime(Calendar.getInstance()), random.nextInt(1000), w, h);
                 }
                 final Bitmap fb = b;
                 final String fcr = cr;
