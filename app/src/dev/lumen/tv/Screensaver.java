@@ -24,6 +24,19 @@ import java.util.Random;
  */
 public final class Screensaver extends DreamService {
     private static volatile long suppressHomeBackUntil;
+    private static Bitmap wakeFrame;  // the last frame, handed to Home so it can dissolve from it
+    private static long wakeFrameAt;
+
+    /**
+     * The frame the screensaver last showed when a key woke it, once; Home fades it out over itself. A frame
+     * Home didn't pick up straight away (the screensaver started over another app) is stale and dropped.
+     */
+    static Bitmap takeWakeFrame() {
+        Bitmap b = wakeFrame;
+        wakeFrame = null;
+        if (b != null && SystemClock.uptimeMillis() - wakeFrameAt > 1000) { b.recycle(); return null; }
+        return b;
+    }
 
     static boolean consumeHomeBack(KeyEvent event) {
         if (event.getKeyCode() != KeyEvent.KEYCODE_BACK && event.getKeyCode() != KeyEvent.KEYCODE_ESCAPE) return false;
@@ -70,7 +83,7 @@ public final class Screensaver extends DreamService {
         private String cachedTime = "", cachedLine = "", cachedTemp, textKind;
         private int textTemp = Integer.MIN_VALUE;
         private boolean textWeather;
-        private boolean attached;
+        private boolean attached, finishing;
 
         SaverView(Context c) {
             super(c);
@@ -97,8 +110,28 @@ public final class Screensaver extends DreamService {
             // Consume the complete press before finishing; otherwise Home can receive the
             // trailing Back event and immediately launch the screensaver again.
             if (keyCode == KeyEvent.KEYCODE_BACK || keyCode == KeyEvent.KEYCODE_ESCAPE) suppressHomeBack();
+            if (finishing) return true;
+            finishing = true;
+            if (!prefs.is(Prefs.MOTION, "reduced")) { wakeFrame = capture(); wakeFrameAt = SystemClock.uptimeMillis(); }
             post(() -> ((Screensaver) getContext()).finish());
             return true;
+        }
+
+        /**
+         * This frame at half size. Home is not drawn while the screensaver is up, so it can't fade to reveal it;
+         * instead Home opens under a copy of this frame and dissolves it.
+         */
+        private Bitmap capture() {
+            if (getWidth() == 0) return null;
+            try {
+                Bitmap b = Bitmap.createBitmap(getWidth() / 2, getHeight() / 2, Bitmap.Config.ARGB_8888);
+                Canvas c = new Canvas(b);
+                c.scale(.5f, .5f);
+                draw(c);
+                return b;
+            } catch (OutOfMemoryError e) {
+                return null;
+            }
         }
 
         private final Runnable weatherTick = new Runnable() {

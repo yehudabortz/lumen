@@ -6,9 +6,12 @@ package dev.lumen.tv;
  */
 final class Spring {
     float x, v, target;
-    private final float freq, damping;
+    private float freq, damping;
 
     Spring(float freq, float damping) { this.freq = freq; this.damping = damping; }
+
+    /** Retunes mid-flight, keeping position and velocity, e.g. a lively open and a brisk close. */
+    Spring tune(float freq, float damping) { this.freq = freq; this.damping = damping; return this; }
 
     Spring at(float value) { x = target = value; v = 0; return this; }
 
