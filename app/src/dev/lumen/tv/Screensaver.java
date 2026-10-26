@@ -24,6 +24,19 @@ import java.util.Random;
  */
 public final class Screensaver extends DreamService {
     private static volatile long suppressHomeBackUntil;
+    private static Bitmap wakeFrame;  // the last frame, handed to Home so it can dissolve from it
+    private static long wakeFrameAt;
+
+    /**
+     * The frame the screensaver last showed when a key woke it, once; Home fades it out over itself. A frame
+     * Home didn't pick up straight away (the screensaver started over another app) is stale and dropped.
+     */
+    static Bitmap takeWakeFrame() {
+        Bitmap b = wakeFrame;
+        wakeFrame = null;
+        if (b != null && SystemClock.uptimeMillis() - wakeFrameAt > 1000) { b.recycle(); return null; }
+        return b;
+    }
 
     static boolean consumeHomeBack(KeyEvent event) {
         if (event.getKeyCode() != KeyEvent.KEYCODE_BACK && event.getKeyCode() != KeyEvent.KEYCODE_ESCAPE) return false;
@@ -67,10 +80,10 @@ public final class Screensaver extends DreamService {
         private LinearGradient shade;
         private float s = 1, vh = Ui.H;  // vh: the view's height in design px
         private long textMinute = -1;
-        private String cachedTime = "", cachedLine = "", textDescription;
+        private String cachedTime = "", cachedLine = "", cachedTemp, textKind;
         private int textTemp = Integer.MIN_VALUE;
         private boolean textWeather;
-        private boolean attached;
+        private boolean attached, finishing;
 
         SaverView(Context c) {
             super(c);
@@ -97,8 +110,28 @@ public final class Screensaver extends DreamService {
             // Consume the complete press before finishing; otherwise Home can receive the
             // trailing Back event and immediately launch the screensaver again.
             if (keyCode == KeyEvent.KEYCODE_BACK || keyCode == KeyEvent.KEYCODE_ESCAPE) suppressHomeBack();
+            if (finishing) return true;
+            finishing = true;
+            if (!prefs.is(Prefs.MOTION, "reduced")) { wakeFrame = capture(); wakeFrameAt = SystemClock.uptimeMillis(); }
             post(() -> ((Screensaver) getContext()).finish());
             return true;
+        }
+
+        /**
+         * This frame at half size. Home is not drawn while the screensaver is up, so it can't fade to reveal it;
+         * instead Home opens under a copy of this frame and dissolves it.
+         */
+        private Bitmap capture() {
+            if (getWidth() == 0) return null;
+            try {
+                Bitmap b = Bitmap.createBitmap(getWidth() / 2, getHeight() / 2, Bitmap.Config.ARGB_8888);
+                Canvas c = new Canvas(b);
+                c.scale(.5f, .5f);
+                draw(c);
+                return b;
+            } catch (OutOfMemoryError e) {
+                return null;
+            }
         }
 
         private final Runnable weatherTick = new Runnable() {
@@ -215,30 +248,45 @@ public final class Screensaver extends DreamService {
             boolean right = corner == 1 || corner == 2, top = corner >= 2;
             boolean wx = prefs.is(Prefs.WEATHER, "on") && weather.ready();
             long minute = System.currentTimeMillis() / 60_000;
-            if (minute != textMinute || wx != textWeather || weather.temp != textTemp || weather.description != textDescription) {
+            if (minute != textMinute || wx != textWeather || weather.temp != textTemp || weather.kind != textKind) {
                 String mode = prefs.get(Prefs.CLOCK);
                 boolean h24 = "24".equals(mode) || ("system".equals(mode) && DateFormat.is24HourFormat(getContext()));
                 Calendar cal = Calendar.getInstance();
                 cachedTime = DateFormat.format(h24 ? "H:mm" : "h:mm", cal).toString();
                 cachedLine = DateFormat.format("EEEE, MMMM d", cal).toString();
-                if (wx) cachedLine += "   ·   " + weather.temp + "°  " + weather.description;
-                textMinute = minute; textTemp = weather.temp; textDescription = weather.description; textWeather = wx;
+                if (wx) cachedLine += "   ·   ";
+                cachedTemp = wx ? weather.temp + "°" : null;
+                textMinute = minute; textTemp = weather.temp; textKind = weather.kind; textWeather = wx;
             }
 
             float x = right ? Ui.W - 120 : 120, timeBase = top ? 96 + 150 * .73f : vh - 104 - 48;
             Paint.Align al = right ? Paint.Align.RIGHT : Paint.Align.LEFT;
             timeP.setTextAlign(al);
-            lineP.setTextAlign(al);
             timeP.setAlpha(Math.round(242 * a));
             lineP.setAlpha(Math.round(210 * a));
             c.drawText(cachedTime, x, timeBase, timeP);
-            c.drawText(cachedLine, x, timeBase + 56, lineP);
+            drawLine(c, x, timeBase + 56, right, a);
 
             if (credit != null) {
                 creditP.setTextAlign(right ? Paint.Align.LEFT : Paint.Align.RIGHT);
                 creditP.setAlpha(Math.round(Color.alpha(Ui.TEXT_3) * a));
                 c.drawText(credit, right ? Ui.SAFE_X : Ui.W - Ui.SAFE_X, top ? vh - 40 : 64, creditP);
             }
+        }
+
+        /** The date, then the weather as its condition glyph and the temperature, like Home's status bar. */
+        private void drawLine(Canvas c, float x, float base, boolean right, float a) {
+            lineP.setTextAlign(Paint.Align.LEFT);
+            float iconR = 17, gap = 10, dateW = lineP.measureText(cachedLine);
+            float w = dateW + (cachedTemp == null ? 0 : iconR * 2 + gap + lineP.measureText(cachedTemp));
+            float l = right ? x - w : x;
+            c.drawText(cachedLine, l, base, lineP);
+            if (cachedTemp == null) return;
+            float cx = l + dateW + iconR, cy = base - .36f * lineP.getTextSize();
+            int layer = c.saveLayerAlpha(cx - iconR * 1.5f, cy - iconR * 1.5f, cx + iconR * 1.5f, cy + iconR * 1.5f, Math.round(235 * a));
+            Glyphs.weather(c, weather.kind, cx, cy, iconR, fill, stroke);
+            c.restoreToCount(layer);
+            c.drawText(cachedTemp, cx + iconR + gap, base, lineP);
         }
     }
 }

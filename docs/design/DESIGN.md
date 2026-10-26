@@ -69,12 +69,15 @@ a browser. The arrow keys act as the D-pad, Enter as OK (hold it for the tile me
    glass bar and a gear chip slides in at its end. The chip is the focused control (near-white, lifted, dark gear).
    OK opens Settings as a compact dropdown 12 px below the bar, right edges aligned, as tall as its content, with
    today's weather (a condition glyph, the temperature, high and low) under the title. Changes preview live. There is no settings tile; the tile
-   menu and the remote's Menu key open the same dropdown.
+   menu and the remote's Menu key open the same dropdown. It grows out of the gear chip from 90%, solid within the
+   first third of the move, and settles with a barely visible overshoot; closing, it shrinks only slightly and fades
+   quickly, with no bounce.
 7. **Screensaver.** The same scene, full screen, drifting very slowly (a 90 s zoom-and-pan, back and forth), with
    a large clock (150 px SemiBold), the date and the weather at the top right, where Home's clock sits. The text
    block moves to the next corner every four minutes so nothing burns into OLED panels, fading out and in over
    600 ms. It fades in with the first picture over 450 ms; new photos crossfade over 2.5 s.
-   Any key wakes the TV straight back to Home.
+   Any key wakes the TV straight back to Home, which crossfades in under the screensaver's last frame over 400 ms
+   (instant with Reduced motion). Home takes input at once; the dissolving frame is only an overlay.
 
 ## Content: where the shelf comes from
 

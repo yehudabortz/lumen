@@ -55,6 +55,7 @@ final class HomeView extends View implements Overlays.Host {
     private static final float GRID_STEP_Y = TILE_H + 84;
     private static final long HEARTBEAT_MS = 3400;
     private static final long HEARTBEAT_SETTLE_MS = 700;
+    private static final long WAKE_FADE_MS = 400;
 
     private enum Area { ROW, SHELF, GRID, STATUS }  // STATUS: the clock-and-weather pill (settings)
     private static final Object STATUS_KEY = new Object();
@@ -92,6 +93,8 @@ final class HomeView extends View implements Overlays.Host {
     private boolean returningHome = true, heartbeatArmed;
     private long lastFrame, lastKey, toastUntil, heartbeatEpoch = SystemClock.uptimeMillis();
     private String toast, clockText;
+    private Bitmap wakeFrame;  // the screensaver's last frame, dissolving away after a wake
+    private long wakeAt;
     private int clockMinute = -1;
 
     // Paints and reusable geometry (nothing is allocated per frame on the common path)
@@ -558,10 +561,27 @@ final class HomeView extends View implements Overlays.Host {
         overlays.draw(c);
         drawToast(c, now);
         c.restore();
+        anim |= drawWakeFrame(c, now);
 
         if (anim || moving || (toast != null && now < toastUntil + 400)) postInvalidateOnAnimation();
         else if (heartbeatActive()) postInvalidateDelayed(64);
         else lastFrame = 0;  // idle: the next frame starts fresh
+    }
+
+    /** Waking from the screensaver: its last frame lies over Home and dissolves, so the two crossfade. */
+    private boolean drawWakeFrame(Canvas c, long now) {
+        if (wakeFrame == null) {
+            wakeFrame = Screensaver.takeWakeFrame();
+            if (wakeFrame == null) return false;
+            wakeAt = now;
+        }
+        float t = Ui.clamp((now - wakeAt) / (float) WAKE_FADE_MS, 0, 1);
+        if (t >= 1) { wakeFrame.recycle(); wakeFrame = null; return false; }
+        r.set(0, 0, getWidth(), getHeight());
+        bmp.setAlpha(Math.round(255 * (1 - t * t * (3 - 2 * t))));  // smoothstep: eases in and out
+        c.drawBitmap(wakeFrame, null, r, bmp);
+        bmp.setAlpha(255);
+        return true;
     }
 
     private boolean heartbeatActive() {
