@@ -20,12 +20,14 @@
 
 ## Repository controls
 
-The desired `main` policy is recorded in [`.github/main-ruleset.json`](../.github/main-ruleset.json). It requires
-pull requests, the latest `Build and tests` and `Secret scan` checks, resolved conversations, squash merges and
-linear history. It prevents deletion and force pushes, with no routine administrator bypass. The review count
-is zero so a solo maintainer can merge their own passing PR; increase it when another reviewer is available.
+The `main` policies live in [`.github/main-ruleset.json`](../.github/main-ruleset.json) and
+[`.github/owner-review-ruleset.json`](../.github/owner-review-ruleset.json). All PRs require passing build and
+secret-scan checks, an up-to-date branch, resolved conversations and squash merges. Force pushes and branch
+deletion are blocked, with no bypass for these rules. Other contributors also need one CODEOWNER approval
+from `@yehudabortz`; new commits dismiss old approvals. Administrators can bypass the approval requirement
+when merging a PR, allowing the owner to merge their own work. They still must satisfy the checks.
 
-Apply and verify it with:
+Apply both policies with:
 
 ```sh
 sh tools/security/apply-main-protection.sh yehudabortz/lumen
