@@ -67,7 +67,9 @@ final class Overlays {
     private int closingMode = NONE;
     private LinearGradient fade;
     private final android.graphics.Path clipPath = new android.graphics.Path();
-    private final Spring open = new Spring(3f, .9f), scroll = new Spring(3f, 1f), pill = new Spring(4f, .85f);
+    // Overlays open with a hint of life and close briskly, with no bounce
+    private static final float OPEN_HZ = 3.4f, OPEN_DAMPING = .8f, CLOSE_HZ = 5f;
+    private final Spring open = new Spring(OPEN_HZ, OPEN_DAMPING), scroll = new Spring(3f, 1f), pill = new Spring(4f, .85f);
 
     // menu
     private AppStore.App target;
@@ -124,7 +126,7 @@ final class Overlays {
         itemI = 0;
         pill.at(itemI);
         mode = closingMode = MENU;
-        open.target = 1;
+        open.tune(OPEN_HZ, OPEN_DAMPING).target = 1;
         host.redraw();
     }
 
@@ -136,14 +138,14 @@ final class Overlays {
         scroll.at(0);
         pill.at(rowI);
         mode = closingMode = PANEL;
-        open.target = 1;
+        open.tune(OPEN_HZ, OPEN_DAMPING).target = 1;
         host.panelOpened();
         host.redraw();
     }
 
     void close() {
         mode = NONE;
-        open.target = 0;
+        open.tune(CLOSE_HZ, 1f).target = 0;
         host.redraw();
     }
 
@@ -432,13 +434,16 @@ final class Overlays {
             if (rowI == lastFocusable()) scroll.target = Math.max(0, contentH - h);  // reveal the notes below
         }
 
-        // grows out of the gear chip
-        float sc = .92f + .08f * t;
+        // grows out of the gear chip, opaque early so it never looks ghostly mid-grow, and settles with the
+        // spring's slight overshoot; closing, it shrinks only a little and is mostly a quick fade
+        boolean closing = mode == NONE;
+        float sc = closing ? .96f + .04f * t : .9f + .1f * Math.min(open.x, 1.02f);
+        float opacity = closing ? t : Ui.clamp(t / .45f, 0, 1);
         c.save();
         c.scale(sc, sc, right - Ui.CHIP_INSET - Ui.CHIP_D / 2, Ui.BAR_TOP + Ui.BAR_H / 2);
         r.set(x, top, right, bottom);
-        boolean fading = t < .99f;
-        if (fading) c.saveLayerAlpha(r.left - 120, r.top - 120, r.right + 120, r.bottom + 160, Math.round(255 * t));
+        boolean fading = opacity < .99f;
+        if (fading) c.saveLayerAlpha(r.left - 120, r.top - 120, r.right + 120, r.bottom + 160, Math.round(255 * opacity));
         panelGlass(c, r, Ui.MENU_R, host.liveBackdrop(), 1);
         c.save();
         c.clipRect(r);
