@@ -118,6 +118,41 @@ final class Ui {
 
     static Path squircle(Path p, RectF rr, float radius) { return squircle(p, rr.left, rr.top, rr.right, rr.bottom, radius); }
 
+    /**
+     * Figma-style smoothed corners: smoothing 0 is a plain circular arc, 1 replaces the arc entirely with easing
+     * curves that start 2 r from the corner. Smoothing is reduced when the sides are too short to fit it.
+     */
+    static Path squircle(Path p, RectF rr, float radius, float smoothing) {
+        float l = rr.left, t = rr.top, r = rr.right, b = rr.bottom, half = Math.min(r - l, b - t) / 2;
+        p.reset();
+        if (radius >= half * .98f) { p.addRoundRect(rr, half, half, Path.Direction.CW); return p; }
+        float s = Math.max(0, Math.min(smoothing, half / radius - 1));
+        float pl = (1 + s) * radius;
+        double arc = Math.toRadians(90 * (1 - s));
+        float arcLen = (float) (Math.sin(arc / 2) * radius * Math.sqrt(2));
+        float alpha = (float) Math.toRadians((90 - Math.toDegrees(arc)) / 2), beta = (float) Math.toRadians(45 * s);
+        float p34 = (float) (radius * Math.tan(alpha / 2));
+        float cc = (float) (p34 * Math.cos(beta)), d = (float) (cc * Math.tan(beta));
+        float bb = (pl - arcLen - cc - d) / 3, a = 2 * bb;
+        // top-right corner in (u, v): u inward from the right edge, v down from the top, as for CORNER above
+        float u1 = pl - a - bb - cc, u2 = u1 - arcLen, v2 = d + arcLen;
+        float h = (float) (4.0 / 3 * Math.tan(arc / 4) * radius);  // the circular part as one cubic
+        float sx = (u1 - radius) / radius, sy = (d - radius) / radius, ex = (u2 - radius) / radius, ey = (v2 - radius) / radius;
+        float[] k = {
+                pl, 0,
+                pl - a, 0, pl - a - bb, 0, u1, d,
+                u1 + h * sy, d - h * sx, u2 - h * ey, v2 + h * ex, u2, v2,
+                u2 - d, v2 + cc, u2 - d, v2 + bb + cc, u2 - d, v2 + a + bb + cc,
+        };
+        for (int w = 0; w < 4; w++) {
+            map(w, k[0], k[1], l, t, r, b, 1, P0);
+            if (w == 0) p.moveTo(P0[0], P0[1]); else p.lineTo(P0[0], P0[1]);
+            for (int i = 2; i < k.length; i += 6) cubic(p, w, k, i, l, t, r, b, 1, P1, P2, P3);
+        }
+        p.close();
+        return p;
+    }
+
     private static final float[] P0 = new float[2], P1 = new float[2], P2 = new float[2], P3 = new float[2];  // UI thread only
 
     private static void corner(Path p, int which, float l, float t, float r, float b, float k, boolean first) {

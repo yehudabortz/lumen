@@ -44,7 +44,7 @@ final class HomeView extends View implements Overlays.Host {
     // ---- Layout (design px) ----
     private static final float PAD = 40, GAP = 52, TILE_W = AppStore.TILE_W, TILE_H = AppStore.TILE_H;
     private static final float DOCK_W = Ui.W - 2 * Ui.SAFE_X, LEFT = Ui.SAFE_X + PAD;  // ROW_MAX tiles fill the dock exactly
-    private static final float R_TILE = 20, R_DOCK = R_TILE + PAD, DOCK_BOTTOM = 872, ROW_MAX = 5;
+    private static final float R_TILE = 20, R_DOCK = R_TILE + PAD, DOCK_SMOOTH = 1, DOCK_BOTTOM = 872, ROW_MAX = 5;
     private static final float CARD_W_MAX = 520, CARD_H_MAX = CARD_W_MAX * 9 / 16;
     private float cardW, cardH, shelfTop, cardTop;  // set by layoutShelf() from the Card size setting
     private static final float GRID_TOP = 1018, GRID_STEP_Y = TILE_H + 84, APPS_SHIFT = 540;
@@ -872,15 +872,15 @@ final class HomeView extends View implements Overlays.Host {
             m.setRectToRect(srcRect, screenRect, Matrix.ScaleToFit.FILL);
             gs.setLocalMatrix(m);
             glassPaint.setShader(gs);
-            rrect(c, dock, R_DOCK, glassPaint);
+            rrect(c, dock, R_DOCK, DOCK_SMOOTH, glassPaint);
             glassPaint.setShader(null);
-            if (appsT > 0.001f) { fill.setShader(null); fill.setColor(Color.argb(Math.round(128 * appsT), 0, 0, 0)); rrect(c, dock, R_DOCK, fill); }
+            if (appsT > 0.001f) { fill.setShader(null); fill.setColor(Color.argb(Math.round(128 * appsT), 0, 0, 0)); rrect(c, dock, R_DOCK, DOCK_SMOOTH, fill); }
         }
         fill.setColor(Color.WHITE);
         unit(fill, dockTintU, t, dockH, 255);
-        rrect(c, dock, R_DOCK, fill);
+        rrect(c, dock, R_DOCK, DOCK_SMOOTH, fill);
         unit(fill, dockSheenU, t, dockH * .42f, 255);
-        rrect(c, dock, R_DOCK, fill);
+        rrect(c, dock, R_DOCK, DOCK_SMOOTH, fill);
         fill.setShader(null);
         fill.setAlpha(255);
 
@@ -898,12 +898,12 @@ final class HomeView extends View implements Overlays.Host {
         c.restore();
 
         // specular rim, plus the highlight that glides to sit above the focused tile
-        rim(c, dock, R_DOCK, 1);
+        rim(c, dock, R_DOCK, DOCK_SMOOTH, 1);
         spec.target = focusedIdx >= 0 && !row.isEmpty() ? x0 + focusedIdx * (TILE_W + GAP) + TILE_W / 2 : l + dockW / 2;
         if (spec.x == 0) spec.at(spec.target);
         float specA = 1 - .65f * appsT;
-        glow(c, dock, R_DOCK, spec.x, t + dockH * .006f, 198, dockH * .032f, Math.round(242 * specA));
-        glow(c, dock, R_DOCK, spec.x, t, 239, dockH * .42f, Math.round(51 * specA));
+        glow(c, dock, R_DOCK, DOCK_SMOOTH, spec.x, t + dockH * .006f, 198, dockH * .032f, Math.round(242 * specA));
+        glow(c, dock, R_DOCK, DOCK_SMOOTH, spec.x, t, 239, dockH * .42f, Math.round(51 * specA));
 
         // names under the dock
         String mode = prefs.get(Prefs.LABELS);
@@ -999,24 +999,27 @@ final class HomeView extends View implements Overlays.Host {
     }
 
     /** The specular rim: bright where light hits the top edge, a faint bounce at the bottom. */
-    private void rim(Canvas c, RectF rr, float radius, float alpha) {
+    private void rim(Canvas c, RectF rr, float radius, float alpha) { rim(c, rr, radius, -1, alpha); }
+
+    private void rim(Canvas c, RectF rr, float radius, float smoothing, float alpha) {
         stroke.setStrokeWidth(1.5f);
         stroke.setColor(Color.WHITE);
         unit(stroke, dockRimU, rr.top, rr.height(), Math.round(255 * alpha));
-        rrect(c, rr.left + .75f, rr.top + .75f, rr.right - .75f, rr.bottom - .75f, radius, stroke);
+        rimRect.set(rr.left + .75f, rr.top + .75f, rr.right - .75f, rr.bottom - .75f);
+        rrect(c, rimRect, radius - .75f, smoothing, stroke);
         stroke.setShader(null);
         stroke.setAlpha(255);
     }
 
     /** A soft white elliptical glow at (cx, cy) with radii rx, ry, painted only inside the rounded rect `in`. */
-    private void glow(Canvas c, RectF in, float radius, float cx, float cy, float rx, float ry, int alpha) {
+    private void glow(Canvas c, RectF in, float radius, float smoothing, float cx, float cy, float rx, float ry, int alpha) {
         sm.setScale(rx, Math.max(.5f, ry));
         sm.postTranslate(cx, cy);
         glowU.setLocalMatrix(sm);
         fill.setColor(Color.WHITE);
         fill.setShader(glowU);
         fill.setAlpha(alpha);
-        rrect(c, in, radius, fill);
+        rrect(c, in, radius, smoothing, fill);
         fill.setShader(null);
         fill.setAlpha(255);
     }
@@ -1078,7 +1081,14 @@ final class HomeView extends View implements Overlays.Host {
     // ---- continuous-corner drawing (continuous rounded rects; see Ui.squircle) ----
     private final android.graphics.Path rrPath = new android.graphics.Path();
 
+    private final RectF rimRect = new RectF();
+
     private void rrect(Canvas c, RectF rr, float radius, Paint p) { c.drawPath(Ui.squircle(rrPath, rr, radius), p); }
+
+    /** smoothing < 0 keeps the standard continuous corner; 0..1 uses Figma-style smoothing (the dock uses 1). */
+    private void rrect(Canvas c, RectF rr, float radius, float smoothing, Paint p) {
+        c.drawPath(smoothing < 0 ? Ui.squircle(rrPath, rr, radius) : Ui.squircle(rrPath, rr, radius, smoothing), p);
+    }
 
     private void rrect(Canvas c, float l, float t, float r, float b, float radius, Paint p) { c.drawPath(Ui.squircle(rrPath, l, t, r, b, radius), p); }
 }
