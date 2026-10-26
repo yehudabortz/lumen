@@ -411,7 +411,7 @@ final class HomeView extends View implements Overlays.Host {
         } else {
             int n = gridI + dx + dy * 5;
             if (dy < 0 && gridI < 5) { if (!row.isEmpty()) { area = Area.ROW; appsS.target = 0; } else toStatus(); }
-            else if (n >= 0 && n < rest.size() && (dx == 0 || n / 5 == gridI / 5)) { gridI = n; focusChanged(); }
+            else if (n >= 0 && n < rest.size()) { gridI = n; focusChanged(); }  // ◀ ▶ run on past a row's end into the next
             else if (dy > 0 && n >= rest.size() && gridI / 5 < (rest.size() - 1) / 5) { gridI = rest.size() - 1; focusChanged(); }
         }
         rememberFocusedApp();
