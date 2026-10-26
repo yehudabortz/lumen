@@ -43,11 +43,13 @@ final class HomeView extends View implements Overlays.Host {
 
     // ---- Layout (design px) ----
     private static final float PAD = 40, GAP = 42, TILE_W = AppStore.TILE_W, TILE_H = AppStore.TILE_H;
-    private static final float DOCK_W = Ui.W - 2 * Ui.SAFE_X, LEFT = Ui.SAFE_X + PAD, RIGHT = Ui.W - LEFT;  // ROW_MAX tiles fill the dock exactly; text aligns to the tiles
+    private static final float DOCK_W = Ui.W - 2 * Ui.SAFE_X, LEFT = Ui.SAFE_X + PAD;  // ROW_MAX tiles fill the dock exactly
+    // The dock's outer edges: the shelf, headings and text start and end here, like the dock itself
+    private static final float EDGE_L = Ui.SAFE_X, EDGE_R = Ui.W - Ui.SAFE_X;
     // Tiles and cards use Apple's 60% corner smoothing; the dock's outline is the tiles' outline grown by PAD
     private static final float R_TILE = 22, TILE_SMOOTH = .6f, R_DOCK = R_TILE + PAD, DOCK_SMOOTH = concentric(R_TILE, TILE_SMOOTH, PAD);
     private static final float DOCK_BOTTOM = 872, ROW_MAX = 5;
-    private static final float CARD_W_MAX = 522, CARD_H_MAX = CARD_W_MAX * 9 / 16;
+    private static final float CARD_W_MAX = 548, CARD_H_MAX = CARD_W_MAX * 9 / 16;
     private float cardW, cardH, shelfTop, cardTop;  // set by layoutShelf() from the Card size setting
     private static final float GRID_TOP = 1018, GRID_STEP_Y = TILE_H + 84, APPS_SHIFT = 540;
     private static final long HEARTBEAT_MS = 3400;
@@ -716,7 +718,7 @@ final class HomeView extends View implements Overlays.Host {
     private void drawCredit(Canvas c, float appsT) {
         if (photoCredit == null || appsT > .99f) return;
         creditP.setAlpha(Math.round(Color.alpha(Ui.TEXT_3) * (1 - appsT)));
-        c.drawText(ellipsize(photoCredit, creditP, RIGHT - LEFT - HINT_ROOM), RIGHT, Ui.H - 38, creditP);  // clears the All Apps hint
+        c.drawText(ellipsize(photoCredit, creditP, EDGE_R - EDGE_L - HINT_ROOM), EDGE_R, Ui.H - 38, creditP);  // clears the All Apps hint
     }
 
     private void drawTopBar(Canvas c) {
@@ -733,7 +735,7 @@ final class HomeView extends View implements Overlays.Host {
         float f = focusOf(STATUS_KEY), fc = Ui.clamp(f, 0, 1);
         final float R = Ui.BAR_RIGHT, cy = Ui.BAR_TOP + Ui.BAR_H / 2, sep = 14, hair = 1.5f;
         float chipD = Ui.CHIP_D, gearRoom = Ui.CHIP_INSET + chipD + sep + hair + sep;  // what the chip adds on the right
-        float x = RIGHT - (RIGHT - R + gearRoom) * fc;  // right edge of the text: the tiles' edge at rest, inside the pill focused
+        float x = EDGE_R - (EDGE_R - R + gearRoom) * fc;  // right edge of the text: the dock's edge at rest, inside the pill focused
 
         float clockW = showClock ? clockP.measureText(clockText) : 0;
         String t = showWx ? weather.temp + "°" : null;
@@ -764,7 +766,7 @@ final class HomeView extends View implements Overlays.Host {
             clockP.setAlpha(255);
             c.drawText(clockText, x, cy + .36f * clockP.getTextSize(), clockP);
             if (prefs.is(Prefs.DATE, "on") && overlays.mode != Overlays.PANEL)
-                c.drawText(DateFormat.format("EEEE, MMMM d", now).toString(), RIGHT, Ui.BAR_TOP + Ui.BAR_H + 30, dateP);
+                c.drawText(DateFormat.format("EEEE, MMMM d", now).toString(), EDGE_R, Ui.BAR_TOP + Ui.BAR_H + 30, dateP);
             x -= clockW;
         }
         if (!showWx) return;
@@ -792,11 +794,12 @@ final class HomeView extends View implements Overlays.Host {
         // the focused card draws last, so its shadow lies over its neighbours
         int focusedIdx = area == Area.SHELF ? cardI : -1;
         c.save();
-        c.clipRect(Ui.SAFE_X, -Ui.H, Ui.W - Ui.SAFE_X, 2 * Ui.H);  // cards end with the dock, not at the screen edge
+        // cards end with the dock, not at the screen edge; the clip leaves room for the focus zoom, not the next card
+        c.clipRect(EDGE_L - GAP + 2, -Ui.H, EDGE_R + GAP - 2, 2 * Ui.H);
         for (int i = 0; i < shelf.items.size(); i++) {
             if (i == focusedIdx) continue;
             float x = left + i * (cardW + GAP) - cardScroll.x;
-            if (x > Ui.W - Ui.SAFE_X || x + cardW < Ui.SAFE_X) continue;
+            if (x > EDGE_R + GAP || x + cardW < EDGE_L - GAP) continue;
             drawCard(c, shelf.items.get(i), x, cardTop, a);
         }
         if (focusedIdx >= 0) drawCard(c, shelf.items.get(focusedIdx), left + focusedIdx * (cardW + GAP) - cardScroll.x, cardTop, a);
@@ -806,8 +809,8 @@ final class HomeView extends View implements Overlays.Host {
     /** Card geometry for the Card size setting. Large cards lift the shelf so their text clears the dock. */
     private void layoutShelf() {
         String size = prefs.get(Prefs.CARD_SIZE);
-        int across = "compact".equals(size) ? 5 : "large".equals(size) ? 3 : 4;  // cards span the dock's tile columns
-        cardW = (DOCK_W - 2 * PAD - (across - 1) * GAP) / across;
+        int across = "compact".equals(size) ? 5 : "large".equals(size) ? 3 : 4;  // cards span the dock, edge to edge
+        cardW = (DOCK_W - (across - 1) * GAP) / across;
         cardH = cardW * 9 / 16;
         shelfTop = Math.min(262, DOCK_BOTTOM - TILE_H - 2 * PAD - cardH - 145);
         cardTop = shelfTop + 50;
@@ -815,12 +818,12 @@ final class HomeView extends View implements Overlays.Host {
 
     /** Scrolls only once focus passes the last card that fits on screen. */
     private float cardScrollTarget() {
-        int visible = Math.max(1, (int) ((Ui.W - Ui.SAFE_X - LEFT + GAP) / (cardW + GAP)));
+        int visible = Math.max(1, (int) ((EDGE_R - EDGE_L + GAP + .5f) / (cardW + GAP)));
         return Math.max(0, cardI - (visible - 1)) * (cardW + GAP);
     }
 
-    /** The first recommendation card shares the first favorite tile's leading edge. */
-    private float shelfLeft() { return LEFT; }
+    /** The first recommendation card shares the dock's outer edge. */
+    private float shelfLeft() { return EDGE_L; }
 
     /** Bottom row: the All Apps hint on the left edge, the photo credit on the right, never overlapping. */
     private static final float HINT_ROOM = 200;
@@ -943,7 +946,7 @@ final class HomeView extends View implements Overlays.Host {
         gridHeadP.setAlpha(Math.round(Color.alpha(Ui.TEXT_2) * alpha));
         c.save();
         c.clipRect(0, DOCK_BOTTOM + 20, Ui.W, Ui.H + APPS_SHIFT);  // rows scrolling up slide under the dock
-        c.drawText("All Apps", LEFT, 966 + 26 - gridScroll.x, gridHeadP);
+        c.drawText("All Apps", EDGE_L, 966 + 26 - gridScroll.x, gridHeadP);
         int focusedIdx = area == Area.GRID ? gridI : -1;
         for (int pass = 0; pass < 2; pass++) {  // focused tile last, so its shadow lies on top
             for (int i = 0; i < rest.size(); i++) {
@@ -1062,12 +1065,12 @@ final class HomeView extends View implements Overlays.Host {
         if (a <= 0) return;
         hintP.setAlpha(Math.round(Color.alpha(Ui.TEXT_3) * a));
         float y = Ui.H - 38;
-        c.drawText("All Apps", LEFT + 22, y, hintP);
+        c.drawText("All Apps", EDGE_L + 22, y, hintP);
         stroke.setShader(null);
         stroke.setStrokeWidth(2.2f);
         stroke.setStrokeCap(Paint.Cap.ROUND);
         stroke.setColor(Ui.withAlpha(Ui.TEXT_3, a));
-        float hx = LEFT + 6, hy = y - 8;
+        float hx = EDGE_L + 6, hy = y - 8;
         c.drawLine(hx - 6, hy - 3, hx, hy + 3, stroke);
         c.drawLine(hx, hy + 3, hx + 6, hy - 3, stroke);
         if (idle < 4.7f) postInvalidateDelayed(120);  // fade it out, then stop drawing
