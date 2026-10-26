@@ -88,7 +88,8 @@ final class HomeView extends View implements Overlays.Host {
     private boolean moving;
     private static final float FOCUS_HZ = 3.4f, SCROLL_HZ = 2.9f, PAGE_HZ = 2.8f;
     private final Spring appsS = new Spring(PAGE_HZ, 1f), rowScroll = new Spring(SCROLL_HZ, 1f), cardScroll = new Spring(SCROLL_HZ, 1f),
-            gridScroll = new Spring(SCROLL_HZ, 1f), spec = new Spring(2.7f, .86f), barHide = new Spring(PAGE_HZ, 1f);
+            gridScroll = new Spring(SCROLL_HZ, 1f), spec = new Spring(2.7f, .86f), barHide = new Spring(PAGE_HZ, 1f),
+            specOn = new Spring(FOCUS_HZ, 1f).at(1);  // 1 while the dock has focus: its highlight is sharp, else soft
     private final Map<Object, Spring> focus = new HashMap<>();
     private boolean returningHome = true, heartbeatArmed;
     private long lastFrame, lastKey, toastUntil, heartbeatEpoch = SystemClock.uptimeMillis();
@@ -257,6 +258,7 @@ final class HomeView extends View implements Overlays.Host {
         for (Map.Entry<Object, Spring> entry : focus.entrySet()) entry.getValue().at(entry.getKey().equals(selected) ? 1 : 0);
         seedCurrentFocus();
         spec.at(0);  // The first frame places the dock light directly above the restored selection.
+        specOn.at(area == Area.ROW ? 1 : 0);
     }
 
     private void pruneFocus() {
@@ -650,7 +652,8 @@ final class HomeView extends View implements Overlays.Host {
         }
         a |= ease(STATUS_KEY, area == Area.STATUS, dt);
         barHide.target = area == Area.GRID ? 1 : 0;  // keyed to focus, so Up to settings from a rowless grid still shows it
-        a |= barHide.step(dt) | spec.step(dt);
+        specOn.target = area == Area.ROW ? 1 : 0;
+        a |= barHide.step(dt) | spec.step(dt) | specOn.step(dt);
         return a;
     }
 
@@ -937,9 +940,12 @@ final class HomeView extends View implements Overlays.Host {
         spec.target = focusedIdx >= 0 && !row.isEmpty() ? x0 + focusedIdx * (TILE_W + GAP) + TILE_W / 2 : l + dockW / 2;
         if (spec.x == 0) spec.at(spec.target);
         if (spec.x != spec.target || spec.v != 0) postInvalidateOnAnimation();  // the target is set after step(), so keep frames coming
-        float specA = 1 - .65f * appsT;
-        glow(c, dock, R_DOCK, DOCK_SMOOTH, spec.x, t + dockH * .006f, 198, dockH * .032f, Math.round(242 * specA));
-        glow(c, dock, R_DOCK, DOCK_SMOOTH, spec.x, t, 239, dockH * .42f, Math.round(51 * specA));
+        // with focus elsewhere the light dims to a third and spreads, so it reads as light on the glass rather than
+        // a selection over whichever tile it rests above
+        float on = Ui.clamp(specOn.x, 0, 1), spread = Ui.lerp(1.7f, 1, on);
+        float specA = Math.min(1 - .65f * appsT, Ui.lerp(.35f, 1, on));
+        glow(c, dock, R_DOCK, DOCK_SMOOTH, spec.x, t + dockH * .006f, 198 * spread, dockH * .032f, Math.round(242 * specA));
+        glow(c, dock, R_DOCK, DOCK_SMOOTH, spec.x, t, 239 * spread, dockH * .42f, Math.round(51 * specA));
 
         // names under the dock
         String mode = prefs.get(Prefs.LABELS);
