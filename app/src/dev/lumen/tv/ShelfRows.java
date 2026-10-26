@@ -3,7 +3,6 @@ package dev.lumen.tv;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,11 +32,11 @@ final class ShelfRows {
     static final String PICKS = "picks", CONTINUE = "continue", NEXT = "next", NEW = "new", WATCHLIST = "watchlist",
             MOVIES = "movies", SHOWS = "shows", LIVE = "live", ALMOST = "almost", SHORT = "short", APP_PREFIX = "app:";
 
-    /** The rows a fresh install shows, first one on Home. */
-    static final List<String> DEFAULT = Collections.unmodifiableList(Arrays.asList(PICKS, CONTINUE, NEXT));
+    /** The settings checklist's groups. Rows always show in this order, so there is nothing to arrange. */
+    static final String[] VIEWING = {CONTINUE, NEXT, NEW, WATCHLIST}, DISCOVER = {PICKS, MOVIES, SHOWS, LIVE, ALMOST, SHORT};
 
-    /** Groups for the Add a row picker, in order; app rows follow as a third group. */
-    static final String[] VIEWING = {CONTINUE, NEXT, NEW, WATCHLIST}, MIXES = {PICKS, MOVIES, SHOWS, LIVE, ALMOST, SHORT};
+    /** The rows a fresh install shows. */
+    static final List<String> DEFAULT = Collections.unmodifiableList(Arrays.asList(CONTINUE, NEXT, PICKS));
 
     private static final long SHORT_MS = 30 * 60_000L;
     private static final int LIMIT = 24;
@@ -64,39 +63,18 @@ final class ShelfRows {
         return id;
     }
 
-    /** One line for the Rows page: what the row collects. */
-    static String describe(String id, Labels labels) {
-        switch (id) {
-            case PICKS: return "What you're watching, mixed with a couple of suggestions from each app.";
-            case CONTINUE: return "Everything you've started, most recent first.";
-            case NEXT: return "The next episode of the shows you're following.";
-            case NEW: return "New episodes of shows you watch.";
-            case WATCHLIST: return "What you've saved to watch later.";
-            case MOVIES: return "Films from what you're watching and your apps' suggestions.";
-            case SHOWS: return "Series and episodes from across your apps.";
-            case LIVE: return "Broadcasts that are on right now.";
-            case ALMOST: return "Things you're more than three-quarters of the way through.";
-            case SHORT: return "Anything with 30 minutes or less left to watch.";
-        }
-        String app = title(id, labels).substring("From ".length());
-        return "What you're watching in " + app + ", then its own suggestions.";
-    }
-
     static boolean known(String id) {
         if (id.startsWith(APP_PREFIX)) return id.length() > APP_PREFIX.length();
         for (String s : VIEWING) if (s.equals(id)) return true;
-        for (String s : MIXES) if (s.equals(id)) return true;
+        for (String s : DISCOVER) if (s.equals(id)) return true;
         return false;
     }
 
-    /** "picks,continue,next" to ids, dropping unknown and repeated ones. */
+    /** "picks,continue" to the checklist's rows in their fixed order, dropping unknown, app and repeated ids. */
     static List<String> parse(String saved) {
-        List<String> out = new ArrayList<>();
-        if (saved == null) return out;
-        for (String id : saved.split(",")) {
-            id = id.trim();
-            if (known(id) && !out.contains(id)) out.add(id);
-        }
+        List<String> chosen = new ArrayList<>(), out = new ArrayList<>();
+        if (saved != null) for (String id : saved.split(",")) chosen.add(id.trim());
+        for (String[] group : new String[][]{VIEWING, DISCOVER}) for (String id : group) if (chosen.contains(id)) out.add(id);
         return out;
     }
 
@@ -143,15 +121,6 @@ final class ShelfRows {
 
     /** Time left to watch: the rest of a started program, or all of an unstarted one. */
     static long remaining(Program p) { return Math.round(p.duration * (1 - p.progress)); }
-
-    /** Apps that have anything for their own row, in the order their content first appears. */
-    static <T extends Program> List<String> appRows(List<T> next, List<T> previews, Set<String> off) {
-        Set<String> seen = new HashSet<>();
-        List<String> out = new ArrayList<>();
-        for (List<T> list : Arrays.asList(next, previews))
-            for (T p : list) if (!off.contains(p.pkg) && seen.add(p.pkg)) out.add(APP_PREFIX + p.pkg);
-        return out;
-    }
 
     /**
      * Top Picks: what you're watching, interleaved with at most two suggestions per app, round-robin and never the

@@ -48,7 +48,7 @@ public final class ScreenshotCapture extends Instrumentation {
             preferences.edit().clear().putString(Prefs.BACKGROUND, "nasa")
                     .putString(Prefs.TIME_OF_DAY, "off").putString(Prefs.DATE, "on")
                     .putString(Prefs.UNITS, "f").putString(Prefs.CLOCK, "12")
-                    .putString(Prefs.SAVER, "nasa").commit();
+                    .putString(Prefs.SAVER, "nasa").putString(Prefs.FOLLOW, "off").commit();
             loadFixtures();
             destination = new File(getTargetContext().getExternalFilesDir(null), "screenshots");
             if (!destination.isDirectory() && !destination.mkdirs()) throw new IllegalStateException("Cannot create screenshot directory");
@@ -96,34 +96,26 @@ public final class ScreenshotCapture extends Instrumentation {
             preference(Prefs.CARD_SIZE, "compact"); preference(Prefs.CARD_TEXT, "title"); capture("compact-cards");
             preference(Prefs.CARD_SIZE, "standard"); preference(Prefs.CARD_TEXT, "details");
 
-            // Top Shelf rows: the title as a switcher, switching, Follow the dock, then the Rows pages of settings
-            rows("picks,continue,next,movies,short");
+            // Top Shelf rows: a stack above the dock with page dots, Up through it, the focused app's own row, and
+            // the checklist in settings
+            rows("continue,next,picks,movies,short");
             runOnMainSync(view::reset);
-            key(KeyEvent.KEYCODE_DPAD_UP); key(KeyEvent.KEYCODE_DPAD_UP);
+            key(KeyEvent.KEYCODE_DPAD_UP);
             capture("shelf-rows");
-            key(KeyEvent.KEYCODE_DPAD_RIGHT); key(KeyEvent.KEYCODE_DPAD_RIGHT); key(KeyEvent.KEYCODE_DPAD_RIGHT);
+            key(KeyEvent.KEYCODE_DPAD_UP); key(KeyEvent.KEYCODE_DPAD_UP); key(KeyEvent.KEYCODE_DPAD_UP);
             capture("shelf-movies");
-            preference(Prefs.SHELF_ROW, "picks");
             preference(Prefs.FOLLOW, "on");
             runOnMainSync(view::reset);
             key(KeyEvent.KEYCODE_DPAD_RIGHT);
             SystemClock.sleep(900);
             capture("follow-dock");
-            preference(Prefs.FOLLOW, "off");
             runOnMainSync(() -> ((Overlays) field(view, "overlays")).openPanel(Prefs.PAGE_ROWS));
             capture("rows-settings");
             for (int i = 0; i < 3; i++) key(KeyEvent.KEYCODE_DPAD_DOWN);
             key(KeyEvent.KEYCODE_DPAD_CENTER);
-            capture("row-actions");
-            key(KeyEvent.KEYCODE_DPAD_CENTER); key(KeyEvent.KEYCODE_DPAD_UP);
-            capture("row-move");
-            key(KeyEvent.KEYCODE_DPAD_CENTER);
-            for (int i = 0; i < 6; i++) key(KeyEvent.KEYCODE_DPAD_DOWN);
-            key(KeyEvent.KEYCODE_DPAD_CENTER);
-            capture("add-row");
-            key(KeyEvent.KEYCODE_BACK);
-            rows("picks,continue,next");
-            preference(Prefs.SHELF_ROW, "picks");
+            capture("rows-checked");
+            preference(Prefs.FOLLOW, "off");
+            rows("picks");
             runOnMainSync(view::reset);
             key(KeyEvent.KEYCODE_DPAD_DOWN);
             capture("all-apps");
@@ -148,7 +140,7 @@ public final class ScreenshotCapture extends Instrumentation {
             SystemClock.sleep(2000);
             captureScreen("screensaver");
             result.putString("output", destination.getAbsolutePath());
-            result.putString("stream", "Captured 23 native Lumen screenshots with public sample content.\n");
+            result.putString("stream", "Captured 21 native Lumen screenshots with public sample content.\n");
             finish(Activity.RESULT_OK, result);
         } catch (Throwable error) {
             result.putString("stream", android.util.Log.getStackTraceString(error));
@@ -256,7 +248,7 @@ public final class ScreenshotCapture extends Instrumentation {
     /** Sets the Top Shelf's rows, first one on Home. */
     private void rows(String ids) {
         runOnMainSync(() -> {
-            preferences.edit().putString(Prefs.SHELF_ROWS, ids).remove(Prefs.SHELF_ROW).commit();
+            preferences.edit().putString(Prefs.SHELF_ROWS, ids).commit();
             view.changed(Prefs.SHELF_ROWS);
         });
     }

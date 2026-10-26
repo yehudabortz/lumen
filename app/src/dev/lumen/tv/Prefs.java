@@ -11,8 +11,8 @@ import java.util.Set;
 final class Prefs {
     static final String BACKGROUND = "bg", TIME_OF_DAY = "tod", MOTION = "motion", SHELF = "shelf", LABELS = "labels",
             CLOCK = "clock", DATE = "date", WEATHER = "weather", UNITS = "units", PHOTOS = "photos", SAVER = "saver";
-    static final String CARD_SIZE = "cardSize", CARD_TEXT = "cardText", FOLLOW = "follow";
-    static final String SHELF_ROWS = "shelfRows", SHELF_ROW = "shelfRow";  // the rows in order; the one on Home
+    static final String CARD_SIZE = "cardSize", CARD_TEXT = "cardText", FOLLOW = "follow";  // follow: "on"/"off"
+    static final String SHELF_ROWS = "shelfRows";  // the checked rows of the Top Shelf checklist
     static final String HIDDEN = "hidden", SHELF_OFF = "shelfOff";
 
     /** One row of the settings panel. Pages open a list; choices cycle through values. */
@@ -39,7 +39,6 @@ final class Prefs {
         new Option("Appearance", MOTION, "Motion", new String[]{"full", "reduced"}, new String[]{"Full", "Reduced"}),
         new Option("Top Shelf", SHELF, "Top Shelf", new String[]{"on", "off"}, new String[]{"On", "Off"}),
         new Option("Top Shelf", PAGE_ROWS, "Rows", null, null),
-        new Option("Top Shelf", FOLLOW, "Follow the dock", new String[]{"off", "on"}, new String[]{"Off", "On"}),
         new Option("Top Shelf", CARD_SIZE, "Card size", new String[]{"standard", "large", "compact"}, new String[]{"Standard", "Large", "Compact"}),
         new Option("Top Shelf", CARD_TEXT, "Card text", new String[]{"details", "title", "none"}, new String[]{"Title & details", "Title only", "None"}),
         new Option("Top Shelf", PAGE_SHELF_APPS, "Apps in Top Shelf", null, null),
@@ -71,8 +70,8 @@ final class Prefs {
 
     /** Whether a row applies right now (photo frequency only matters for a NASA photo background). */
     boolean relevant(Option o) {
-        if (CARD_SIZE.equals(o.key) || CARD_TEXT.equals(o.key) || PAGE_ROWS.equals(o.key) || FOLLOW.equals(o.key)
-                || PAGE_SHELF_APPS.equals(o.key)) return !is(SHELF, "off");
+        if (CARD_SIZE.equals(o.key) || CARD_TEXT.equals(o.key) || PAGE_ROWS.equals(o.key) || PAGE_SHELF_APPS.equals(o.key))
+            return !is(SHELF, "off");
         if (PHOTOS.equals(o.key)) return is(BACKGROUND, "nasa");
         return true;
     }
@@ -101,8 +100,8 @@ final class Prefs {
     }
 
     /**
-     * The Top Shelf's rows, in order. Before rows existed the shelf was one choice: "upnext" becomes Continue
-     * Watching and Up Next, anything else the default rows.
+     * The Top Shelf's checked rows, in their fixed order. Before rows existed the shelf was one choice: "upnext"
+     * becomes Continue Watching and Up Next, anything else the default rows.
      */
     java.util.List<String> rows() {
         String saved = sp.getString(SHELF_ROWS, null);
@@ -113,10 +112,10 @@ final class Prefs {
 
     void rows(java.util.List<String> ids) { sp.edit().putString(SHELF_ROWS, ShelfRows.join(ids)).apply(); }
 
-    /** The row last chosen on Home, or null for the first. */
-    String row() { return sp.getString(SHELF_ROW, null); }
+    /** Show the focused app: the dock's focused app leads the shelf with its own row. On unless switched off. */
+    boolean follow() { return !"off".equals(sp.getString(FOLLOW, "on")); }
 
-    void row(String id) { sp.edit().putString(SHELF_ROW, id).apply(); }
+    void follow(boolean on) { sp.edit().putString(FOLLOW, on ? "on" : "off").apply(); }
 
     Weather.Place city() {
         String saved = sp.getString("weatherCity", null);

@@ -79,9 +79,6 @@ final class ShelfStore {
 
     int count(String id, Set<String> off) { return ShelfRows.build(id, upNext, recommendations, off).size(); }
 
-    /** Every app with something for its own row. */
-    List<String> appRows(Set<String> off) { return ShelfRows.appRows(upNext, recommendations, off); }
-
     private static void removeUnavailableApps(Context c, List<Item> items) {
         java.util.Iterator<Item> iterator = items.iterator();
         while (iterator.hasNext()) {

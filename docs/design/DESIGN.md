@@ -51,18 +51,18 @@ a browser. The arrow keys act as the D-pad, Enter as OK (hold it for the tile me
 ## Screens
 
 1. **Home.** Scene, weather and clock, the Top Shelf, the dock. Focus starts on the dock.
-2. **Top Shelf.** One row of cards at a time, from rows the user picks and orders (default: **Top Picks for You**,
-   **Continue Watching**, **Up Next**). With more than one row, the title lists them all: the one shown is bright, the
-   rest dim. Up from the cards focuses it (a white capsule); Left/Right switch rows, and the new row slides in from
-   that side (fades only with Reduced motion); Down or OK returns to the cards; long-press OK opens *Settings › Rows*.
-   Rows with nothing in them right now are skipped, and the last row chosen is remembered. Row types:
-   - *Your viewing:* Continue Watching, Up Next, New Episodes and Watchlist, from Watch Next's own types.
-   - *Mixes:* Top Picks (what you're watching interleaved with up to two suggestions per app), Movies, Shows, Live
-     Now, Almost Finished (75–98% watched) and Short Watches (30 minutes or less left).
-   - *From an app:* one app's Watch Next items, then its preview programs.
-   **Follow the dock** (off by default): resting on a dock tile for 0.6 s shows that app's own row, leading the
-   list in the title; moving to an app with nothing shows your chosen row again. Hidden apps and apps switched off
-   in *Apps in Top Shelf* are excluded everywhere.
+2. **Top Shelf.** A stack of rows above the dock, one shown at a time under a single quiet title. When the stack
+   has more than one row, small page dots follow the title (the shown row's dot bright). Up from the cards brings
+   the next row up into place with its title (fades only with Reduced motion); Down goes back, then to the dock;
+   Up past the last row reaches the clock and settings, as before. Back returns to the dock and the first row.
+   Nothing on the shelf is focusable except the cards. The stack:
+   - *The focused app* (on by default): once a dock tile has been focused for 0.6 s, that app's own row (its Watch
+     Next items, then its suggestions) leads the stack, as on a classic Top Shelf. Apps with nothing are skipped.
+   - *Your viewing:* Continue Watching, Up Next, New Episodes, Watchlist, from Watch Next's own types.
+   - *Discover:* Top Picks (what you're watching interleaved with up to two suggestions per app), Movies, Shows,
+     Live Now, Almost Finished (75–98% watched), Short Watches (30 minutes or less left).
+   Rows always appear in this order, and empty rows are skipped. Default: the focused app, Continue Watching, Up
+   Next, Top Picks. Hidden apps and apps switched off in *Apps in Top Shelf* are excluded everywhere.
 3. **Cinematic.** Up from the dock moves focus into the shelf. The focused item's artwork fills the screen behind a
    dark gradient, with the app name, the title, year · rating · genre, a two-line synopsis and *Resume*/*Play*.
    The dock slides away and the cards settle at the bottom. Back or Down returns home.
@@ -221,8 +221,7 @@ Selected rows in menus are near-white pills (94%) with dark text, as on a clean 
 | | Follow time of day | On / Off | **On** |
 | | Motion | Full / Reduced (fades only; focus shown with an outline) | **Full** |
 | Top Shelf | Top Shelf | On / Off | **On** |
-| | Rows | Ordered list; OK on a row: *Move* (Up/Down, OK to drop) or *Remove*; *Add a row* groups Your viewing, Mixes and From an app with live counts | **Top Picks, Continue Watching, Up Next** |
-| | Follow the dock | On / Off | **Off** |
+| | Rows | A checklist titled *Top Shelf*: Your viewing, Discover, and Apps (*Show the focused app*); OK checks or unchecks | **Continue Watching, Up Next, Top Picks, the focused app** |
 | | Cinematic artwork | On / Off (Off keeps the scene behind the hero text) | **On** |
 | | Card size | Standard (376×211) / Large (520×293, shelf lifts to clear the dock) / Compact (300×169) | **Standard** |
 | | Card text | Title & details / Title only / None | **Title & details** |
@@ -293,10 +292,9 @@ an interactive design reference; planned cinematic mode is not shown as a shippe
 | ![Forest by day](screens/forest-day.jpg) Forest by day | ![Dunes at dawn](screens/dunes-dawn.jpg) Dunes at dawn, Up Next |
 | ![Coast by day](screens/coast-day.jpg) Coast by day | ![Quiet](screens/quiet.jpg) Quiet: Black, Top Shelf off |
 | ![Large cards](screens/large-cards.jpg) Top Shelf with Large cards | ![Compact cards](screens/compact-cards.jpg) Compact cards, title only |
-| ![Row switcher](screens/shelf-rows.jpg) The shelf title as a row switcher | ![Movies row](screens/shelf-movies.jpg) Right three times: Movies |
-| ![Follow the dock](screens/follow-dock.jpg) Follow the dock: Prime Video's own row | ![Rows settings](screens/rows-settings.jpg) Settings › Top Shelf rows, with live counts |
-| ![Row actions](screens/row-actions.jpg) One row: Move or Remove, and what it collects | ![Moving a row](screens/row-move.jpg) Moving Movies up the list |
-| ![Add a row](screens/add-row.jpg) Add a row: Your viewing, Mixes, From an app | |
+| ![Row stack](screens/shelf-rows.jpg) The first of five rows, with page dots | ![Movies row](screens/shelf-movies.jpg) Up three times: Movies |
+| ![Focused app](screens/follow-dock.jpg) The focused app's row leads the stack | ![Top Shelf checklist](screens/rows-settings.jpg) Settings › Top Shelf checklist |
+| ![Checking a row](screens/rows-checked.jpg) Checking Watchlist adds it to the stack | |
 
 ![About settings](screens/about.jpg) About: creator credit and a wrapped privacy note inside the panel.
 

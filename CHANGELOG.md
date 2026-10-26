@@ -12,7 +12,7 @@
 - Top Shelf view options: Standard, Large or Compact cards, and title-and-details, title-only or no card text.
 - Weather attribution links in Settings; removed the unused Unsplash integration and API-key embedding.
 - Full-width dock with roomier tiles; the Top Shelf and All Apps share its columns, and the clock and weather lift away in All Apps.
-- Customizable Top Shelf rows: pick and order rows like Continue Watching, Up Next, Movies, Short Watches or one app's own, switch between them from the shelf title, and optionally let the shelf follow the focused app.
+- Top Shelf rows: a stack of rows like Continue Watching, Up Next, Movies or Short Watches, chosen from a checklist and paged with Up and Down; the focused app's own row leads it.
 
 Known limitations: cinematic mode, selectable tile sizes and bundled Inter remain planned. Device vendors
 differ in default-launcher, TV-listings and screensaver behavior. NASA's metadata and exposure filtering

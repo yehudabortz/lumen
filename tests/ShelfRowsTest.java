@@ -51,13 +51,14 @@ public final class ShelfRowsTest {
         withTwin.add(twin);
         check(ShelfRows.build(ShelfRows.MOVIES, next, withTwin, none).size() == 3, "a repeated program shows once");
 
-        check(ShelfRows.appRows(next, previews, none).equals(Arrays.asList("app:a", "app:b", "app:c")), "app rows in first-seen order");
-        check(ShelfRows.parse("picks, movies,bogus,picks,app:,app:x").equals(Arrays.asList("picks", "movies", "app:x")), "parse drops unknown and repeats");
+        check(ShelfRows.parse("picks, movies,bogus,picks,app:,app:x").equals(Arrays.asList("picks", "movies")), "parse drops unknown, app and repeated ids");
+        check(ShelfRows.parse("short,movies,next,continue").equals(Arrays.asList("continue", "next", "movies", "short")), "rows keep the checklist's order");
+        check(ShelfRows.parse("").isEmpty(), "every row unchecked stays empty");
         check(ShelfRows.join(ShelfRows.parse("continue,next")).equals("continue,next"), "join round-trips");
         check(ShelfRows.title("app:x", pkg -> "Northfilm").equals("From Northfilm"), "app row title");
         check(ShelfRows.title("app:x", pkg -> null).equals("From an app"), "app row title without a label");
-        for (String id : ShelfRows.VIEWING) check(ShelfRows.known(id) && !ShelfRows.describe(id, null).isEmpty(), "described: " + id);
-        for (String id : ShelfRows.MIXES) check(ShelfRows.known(id) && !ShelfRows.describe(id, null).isEmpty(), "described: " + id);
+        for (String id : ShelfRows.VIEWING) check(ShelfRows.known(id) && !ShelfRows.title(id, null).equals(id), "named: " + id);
+        for (String id : ShelfRows.DISCOVER) check(ShelfRows.known(id) && !ShelfRows.title(id, null).equals(id), "named: " + id);
         System.out.println("PASS: " + checks + " Top Shelf row checks");
     }
 
