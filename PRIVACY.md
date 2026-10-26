@@ -25,7 +25,7 @@ but does not erase other apps' data or Android TV's listings.
   privacy policies. Their behavior is outside Lumen's control.
 - **Source links:** opening an attribution link uses an available browser; the destination's policy applies.
 
-Drawing a landscape or using a cached image needs no photo download. Turning Weather off stops new scheduled
+Drawing a gradient or using a cached image needs no photo download. Turning Weather off stops new scheduled
 weather requests; a request already in progress may finish. Photo caches remain until Android clears the app's
 cache or you uninstall. Screenshot tooling is separate from the production APK and uses public sample content
 in an emulator; it must never be pointed at a personal TV.

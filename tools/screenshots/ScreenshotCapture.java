@@ -100,11 +100,11 @@ public final class ScreenshotCapture extends Instrumentation {
             capture("all-apps");
             runOnMainSync(view::reset);
 
-            landscape("forest", Scene.DAY); capture("forest-day");
+            landscape("horizon", Scene.DAY); capture("horizon");
             preference(Prefs.SHELF, "upnext");
-            landscape("dunes", Scene.DAWN); capture("dunes-dawn");
+            landscape("sorbet", Scene.DAY); capture("sorbet");
             preference(Prefs.SHELF, "rich");
-            landscape("coast", Scene.DAY); capture("coast-day");
+            landscape("beam", Scene.DAY); capture("beam");
             preference(Prefs.SHELF, "off");
             landscape("black", Scene.DUSK); capture("quiet");
 

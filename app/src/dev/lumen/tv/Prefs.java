@@ -30,8 +30,10 @@ final class Prefs {
 
     static final Option[] OPTIONS = {
         new Option("Appearance", BACKGROUND, "Background",
-                new String[]{"nasa", "alpine", "forest", "dunes", "coast", "graphite", "black"},
-                new String[]{"NASA photos", "Alpine", "Forest", "Dunes", "Coast", "Graphite", "Black"}),
+                new String[]{"nasa", "horizon", "sorbet", "beam", "ember", "aurora", "dusk", "lagoon", "midnight", "citrus",
+                        "rose", "graphite", "black"},
+                new String[]{"NASA photos", "Horizon", "Sorbet", "Beam", "Ember", "Aurora", "Dusk", "Lagoon", "Midnight",
+                        "Citrus", "Rose", "Graphite", "Black"}),
         new Option("Appearance", PHOTOS, "New photo", new String[]{"hour", "day"}, new String[]{"Every hour", "Every day"}),
         new Option("Appearance", TIME_OF_DAY, "Follow time of day", new String[]{"on", "off"}, new String[]{"On", "Off"}),
         new Option("Appearance", MOTION, "Motion", new String[]{"full", "reduced"}, new String[]{"Full", "Reduced"}),
@@ -44,7 +46,7 @@ final class Prefs {
         new Option("Clock & Weather", WEATHER, "Weather", new String[]{"on", "off"}, new String[]{"On", "Off"}),
         new Option("Clock & Weather", PAGE_LOCATION, "Location", null, null),
         new Option("Clock & Weather", UNITS, "Units", new String[]{"auto", "f", "c"}, new String[]{"Auto", "°F", "°C"}),
-        new Option("Screensaver", SAVER, "Screensaver", new String[]{"nasa", "scene", "black"}, new String[]{"NASA photos", "Landscape", "Black"}),
+        new Option("Screensaver", SAVER, "Screensaver", new String[]{"nasa", "scene", "black"}, new String[]{"NASA photos", "Gradients", "Black"}),
         new Option("Apps", LABELS, "Labels", new String[]{"focus", "always", "never"}, new String[]{"On focus", "Always", "Never"}),
         new Option("Apps", PAGE_HIDDEN, "Hidden apps", null, null),
     };
@@ -60,7 +62,7 @@ final class Prefs {
 
     String get(String key) {
         Option o = option(key);
-        String v = sp.getString(key, firstUsable(o));
+        String v = legacy(key, sp.getString(key, firstUsable(o)));
         for (String x : o.values) if (x.equals(v)) return v;
         return firstUsable(o);
     }
@@ -70,6 +72,18 @@ final class Prefs {
         if (CARD_SIZE.equals(o.key) || CARD_TEXT.equals(o.key)) return !is(SHELF, "off");
         if (PHOTOS.equals(o.key)) return is(BACKGROUND, "nasa");
         return true;
+    }
+
+    /** Backgrounds saved by 1.0 and earlier, when the drawn ones were landscapes: each keeps its nearest gradient. */
+    private static String legacy(String key, String v) {
+        if (!BACKGROUND.equals(key) || v == null) return v;
+        switch (v) {
+            case "alpine": return "midnight";
+            case "forest": return "aurora";
+            case "dunes": return "horizon";
+            case "coast": return "lagoon";
+            default: return v;
+        }
     }
 
     private static String firstUsable(Option o) {
