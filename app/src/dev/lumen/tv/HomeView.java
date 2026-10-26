@@ -947,6 +947,8 @@ final class HomeView extends View implements Overlays.Host {
         c.clipRect(0, bottom + 20, Ui.W, end);  // rows scrolling up slide under the dock
         c.drawText("All Apps", LEFT, bottom + 120 - gridScroll.x, gridHeadP);  // lines up with the first column
         int focusedIdx = area == Area.GRID ? gridI : -1;
+        String mode = prefs.get(Prefs.LABELS);  // the same Labels setting as the dock
+        boolean always = "always".equals(mode), never = "never".equals(mode);
         for (int pass = 0; pass < 2; pass++) {  // focused tile last, so its shadow lies on top
             for (int i = 0; i < rest.size(); i++) {
                 if ((i == focusedIdx) != (pass == 1)) continue;
@@ -955,8 +957,12 @@ final class HomeView extends View implements Overlays.Host {
                 AppStore.App a = rest.get(i);
                 drawTile(c, a, x, y, moving && i == focusedIdx, alpha);
                 float f = Ui.clamp(focusOf(a), 0, 1);
-                if (f > 0.01f) {
-                    nameP.setAlpha(Math.round(255 * f * alpha));
+                if (never) continue;
+                if (always && f <= .5f) {  // unfocused names stay quiet, like the dock's
+                    labelDimP.setAlpha(Math.round(Color.alpha(Ui.TEXT_2) * alpha));
+                    c.drawText(ellipsize(a.label, labelDimP, TILE_W + GAP - 8), x + TILE_W / 2, y + TILE_H + 16 + 23 + 6 * f, labelDimP);
+                } else if (f > 0.01f) {
+                    nameP.setAlpha(Math.round(255 * (always ? 1 : f) * alpha));
                     c.drawText(a.label, x + TILE_W / 2, y + TILE_H + 16 + 23 + 6 * f, nameP);
                 }
             }

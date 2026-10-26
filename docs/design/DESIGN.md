@@ -45,7 +45,7 @@ a browser. The arrow keys act as the D-pad, Enter as OK (hold it for the tile me
 | Dock | Glass (see Materials), full width between the 96 px overscan margins, bottom edge 128 px above the screen's real bottom edge (room for the focused app's name and the All Apps hint and credit row). Heights follow the TV's actual screen, not a fixed 1080, so the dock stays at the bottom on any aspect ratio; in All Apps it rises to 86 px from the top. Padding 40 px, tile gap 42 px, so five tiles fill it exactly. Tiles and cards use Apple's 60% corner smoothing; the dock (radius 62 = tile radius + padding) and the focus ring take whatever smoothing makes their corners begin exactly a padding further along the edge, so every outline runs parallel to the one inside it. Everything shares the dock's outer edges (96 and 1824 px): the shelf heading and cards, the All Apps heading and the All Apps hint start on the left one; the clock, date, photo credit and last card end on the right one, where the focused clock pill also ends. Top Shelf cards are clipped to the dock's width |
 | Tiles | 16:9, radius 22 px. Medium 296×166.5 px (default, five across), Small 232×130 (six), Large 376×211 (four) |
 | Focus | A crisp white 3 px focus ring, with a 2.5 px gap and no glow or dark edge on apps and recommendation cards, plus scale 1.09 (cards 1.07) over 240 ms, deep soft shadow and a low-contrast, static top-light sheen. Focused tiles and cards add a softly eased 0.4% double-beat pulse every 3.4 s; it starts only after D-pad navigation. Home restores stable focus by app/content identity at rest, without a zoom replay or entry pulse. Focus springs are critically damped. Reduced motion and open menus pause it. The dock's specular highlight slides to sit above the focused tile |
-| Label | Focused tile only (default). 25 px SemiBold, 22 px under the dock |
+| Label | Focused tile only (default). 25 px SemiBold, 22 px under the dock. The same Labels setting applies to the All Apps grid |
 | Legibility | A dark vignette behind the clock and along the bottom, plus a soft band behind the shelf that strengthens on bright daytime scenes. During the All Apps scroll, the clock, weather and date lift up and fade out (fade only with Reduced motion); nothing is laid over the dock |
 
 ## Screens
@@ -217,7 +217,6 @@ Selected rows in menus are near-white pills (94%) with dark text, as on a clean 
 | | Card text | Title & details / Title only / None | **Title & details** |
 | | Apps in Top Shelf | Per-app toggles | all |
 | Top Row | Tile size | Small / Medium / Large | **Medium** |
-| | Labels | On focus / Always / Never | **On focus** |
 | | Apps | Edit order (opens Move) | well-known video apps first, then A–Z, five apps |
 | Clock & Weather | Clock | System (12/24 h) / 12-hour / 24-hour / Off | **System** |
 | | Show date | On / Off | **Off** |
@@ -225,7 +224,8 @@ Selected rows in menus are near-white pills (94%) with dark text, as on a clean 
 | | Location | City/postal-code search / Time zone (approx.) | **Time zone (approx.)** |
 | | Units | Auto / °F / °C | **Auto** |
 | Screensaver | Screensaver | NASA photos / Landscape / Black | **NASA photos** |
-| Apps | Hidden apps | List with toggles | none |
+| Apps | Labels | On focus / Always / Never (dock and All Apps) | **On focus** |
+| | Hidden apps | List with toggles | none |
 | About | Version and creator credit (Yehuda Bortz), how to switch back to the original home screen | | |
 
 ## Technical shape (keeps it light)
