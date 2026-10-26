@@ -4,6 +4,12 @@ A clean, minimal home screen for **Android TV and Google TV**: your apps, recomm
 
 ![Lumen home screen](docs/design/screens/home.jpg)
 
+| | |
+|---|---|
+| ![Screensaver](docs/design/screens/screensaver.jpg) **Screensaver.** A NASA Earth photo with a large clock, the date and the weather. | ![Continue Watching](docs/design/screens/up-next.jpg) **Continue Watching.** Pick up where you left off, across your apps. |
+| ![Large cards](docs/design/screens/large-cards.jpg) **Your Top Shelf, your way.** Standard, Large or Compact cards. | ![All Apps](docs/design/screens/all-apps.jpg) **All Apps.** Everything in one grid, in the order you choose. |
+| ![Tile menu](docs/design/screens/tile-menu.jpg) **Long-press OK** to move an app, hide it or take it off the top row. | ![Settings](docs/design/screens/settings.jpg) **Settings** drop down from the clock without leaving Home. |
+
 ## Put it on your TV
 
 Works across brands running **Android TV or Google TV, Android 8 or newer**. It does not run directly on Samsung Tizen, LG webOS, Roku. Those TVs can use an external Android TV/Google TV device over HDMI.

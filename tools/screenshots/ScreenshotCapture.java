@@ -116,7 +116,20 @@ public final class ScreenshotCapture extends Instrumentation {
             long end = SystemClock.uptimeMillis() + 10000;
             while (field(saver[0], "current") == null && SystemClock.uptimeMillis() < end) SystemClock.sleep(100);
             if (field(saver[0], "current") == null) throw new IllegalStateException("Native screensaver image did not load");
+            runOnMainSync(() -> {
+                Weather weather = (Weather) field(saver[0], "weather");
+                weather.kind = "partly"; weather.temp = 68; weather.high = 73; weather.low = 59; weather.description = "Partly cloudy";
+                put(weather, "nextFetch", Long.MAX_VALUE);
+                // Discard any live forecast already in flight so it cannot replace the sample report
+                put(weather, "generation", (Integer) field(weather, "generation") + 1);
+                put(weather, "fetching", false);
+                saver[0].invalidate();
+            });
             SystemClock.sleep(2000);
+            // Same sample clock as Home: replace the saver's cached minute text just before the frame
+            runOnMainSync(() -> { put(saver[0], "cachedTime", "9:41"); saver[0].invalidate(); });
+            SystemClock.sleep(100);
+            waitForIdleSync();
             captureScreen("screensaver");
             result.putString("output", destination.getAbsolutePath());
             result.putString("stream", "Captured 16 native Lumen screenshots with public sample content.\n");
