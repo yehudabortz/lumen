@@ -33,7 +33,7 @@ final class Overlays {
         void chooseLocation();
         void sources();
         void panelOpened();        // focus moves to the clock-and-weather pill the dropdown hangs from
-        String weatherLine();      // "Partly cloudy · 62° · H 68° L 51°", or null
+        String weatherLine();      // "62° · H 68° L 51°", or null; the condition is shown by its glyph
         String weatherKind();
         void redraw();
     }
@@ -449,9 +449,9 @@ final class Overlays {
         c.drawText(title, x + IN, 28 + 34 * .73f, titleP);
         if (wxLine != null) {
             float wy = 28 + 34 + 10 + 13;  // centre of the weather line
-            Glyphs.weather(c, host.weatherKind(), x + IN + 12, wy, 12, fill, stroke);
+            Glyphs.weather(c, host.weatherKind(), x + IN + 14, wy, 14, fill, stroke);
             noteP.setColor(Ui.TEXT_2);
-            c.drawText(wxLine, x + IN + 24 + 10, wy + .36f * noteP.getTextSize(), noteP);
+            c.drawText(wxLine, x + IN + 28 + 10, wy + .36f * noteP.getTextSize(), noteP);
         }
         if (!rows.isEmpty()) {
             int lo = (int) Math.floor(Ui.clamp(pill.x, 0, rows.size() - 1)), hi = (int) Math.ceil(Ui.clamp(pill.x, 0, rows.size() - 1));
