@@ -85,6 +85,7 @@ final class Overlays {
     private final android.text.TextPaint ellipsizeP = new android.text.TextPaint();
     private final Paint titleP, nameP, subP, rowP, valueP, headP, noteP;
     private final RectF pillRect = new RectF(), r = new RectF(), src = new RectF(), screen = new RectF(0, 0, Ui.W, Ui.H);
+    private float screenH = Ui.H;  // the home view's height in design px
     private final Matrix m = new Matrix();
     private Bitmap shaderBitmap;
     private BitmapShader shader;
@@ -104,6 +105,9 @@ final class Overlays {
         headP = Ui.text(Ui.semibold, 20, Ui.TEXT_3, 0);
         noteP = Ui.text(Ui.medium, 20, Ui.TEXT_2, -.005f);
     }
+
+    /** Follows the home view's real height, so menus center and panels fit on any screen. */
+    void screenHeight(float h) { screenH = h; screen.set(0, 0, Ui.W, h); }
 
     boolean isOpen() { return mode != NONE; }
 
@@ -351,7 +355,7 @@ final class Overlays {
         c.drawRect(screen, fill);
 
         final float header = 24 + 56 + 24;  // 24 · app tile (56) · 24, then a hairline
-        float w = 560, h = header + 1 + 8 + ROW * items.size() + PAD, cx = Ui.W / 2, cy = Ui.H * .42f + (1 - t) * 12;
+        float w = 560, h = header + 1 + 8 + ROW * items.size() + PAD, cx = Ui.W / 2, cy = screenH * .42f + (1 - t) * 12;
         float sc = .95f + .05f * t;
         c.save();
         c.scale(sc, sc, cx, cy);
@@ -418,7 +422,7 @@ final class Overlays {
         }
         float contentH = y + PAD;
         float w = 600, right = Ui.BAR_RIGHT, x = right - w, top = Ui.BAR_TOP + Ui.BAR_H + Ui.DROPDOWN_GAP;
-        float h = Math.min(contentH, Ui.H - 48 - top), bottom = top + h;
+        float h = Math.min(contentH, screenH - 48 - top), bottom = top + h;
 
         if (!rows.isEmpty()) {  // keep the focused row in view
             float rowTop = ys[rowI], rowBottom = rowTop + ROW, visible = h - PAD;

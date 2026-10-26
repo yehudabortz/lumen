@@ -65,7 +65,7 @@ public final class Screensaver extends DreamService {
         private final Paint timeP, lineP, creditP;
         private final Matrix m = new Matrix();
         private LinearGradient shade;
-        private float s = 1;
+        private float s = 1, vh = Ui.H;  // vh: the view's height in design px
         private long textMinute = -1;
         private String cachedTime = "", cachedLine = "", textDescription;
         private int textTemp = Integer.MIN_VALUE;
@@ -123,7 +123,8 @@ public final class Screensaver extends DreamService {
 
         @Override protected void onSizeChanged(int w, int h, int ow, int oh) {
             s = w / Ui.W;
-            shade = new LinearGradient(0, Ui.H, 0, Ui.H * .45f, Color.argb(150, 0, 0, 0), Color.TRANSPARENT, Shader.TileMode.CLAMP);
+            vh = h / s;
+            shade = new LinearGradient(0, vh, 0, vh * .45f, Color.argb(150, 0, 0, 0), Color.TRANSPARENT, Shader.TileMode.CLAMP);
             load();
         }
 
@@ -179,7 +180,7 @@ public final class Screensaver extends DreamService {
             c.save();
             c.scale(s, s);
             fill.setShader(shade);
-            c.drawRect(0, 0, Ui.W, Ui.H, fill);
+            c.drawRect(0, 0, Ui.W, vh, fill);
             fill.setShader(null);
             drawText(c, now);
             c.restore();
@@ -220,7 +221,7 @@ public final class Screensaver extends DreamService {
                 textMinute = minute; textTemp = weather.temp; textDescription = weather.description; textWeather = wx;
             }
 
-            float x = right ? Ui.W - 120 : 120, timeBase = top ? 96 + 150 * .73f : Ui.H - 104 - 48;
+            float x = right ? Ui.W - 120 : 120, timeBase = top ? 96 + 150 * .73f : vh - 104 - 48;
             Paint.Align al = right ? Paint.Align.RIGHT : Paint.Align.LEFT;
             timeP.setTextAlign(al);
             lineP.setTextAlign(al);
@@ -232,7 +233,7 @@ public final class Screensaver extends DreamService {
             if (credit != null) {
                 creditP.setTextAlign(right ? Paint.Align.LEFT : Paint.Align.RIGHT);
                 creditP.setAlpha(Math.round(Color.alpha(Ui.TEXT_3) * a));
-                c.drawText(credit, right ? Ui.SAFE_X : Ui.W - Ui.SAFE_X, top ? Ui.H - 40 : 64, creditP);
+                c.drawText(credit, right ? Ui.SAFE_X : Ui.W - Ui.SAFE_X, top ? vh - 40 : 64, creditP);
             }
         }
     }

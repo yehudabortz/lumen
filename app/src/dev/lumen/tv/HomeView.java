@@ -48,10 +48,13 @@ final class HomeView extends View implements Overlays.Host {
     private static final float EDGE_L = Ui.SAFE_X, EDGE_R = Ui.W - Ui.SAFE_X;
     // Tiles and cards use Apple's 60% corner smoothing; the dock's outline is the tiles' outline grown by PAD
     private static final float R_TILE = 22, TILE_SMOOTH = .6f, R_DOCK = R_TILE + PAD, DOCK_SMOOTH = concentric(R_TILE, TILE_SMOOTH, PAD);
-    private static final float DOCK_BOTTOM = 872, ROW_MAX = 5;
+    // Vertical anchors: the dock sits DOCK_MARGIN above the screen's real bottom edge (room for the focused app's
+    // name and the hint/credit row), the Top Shelf hangs from SHELF_TOP under the clock, and in All Apps the dock
+    // rises to APPS_DOCK_TOP. Heights follow the view, so any TV aspect keeps the dock at the bottom.
+    private static final float DOCK_MARGIN = 128, SHELF_TOP = 190, APPS_DOCK_TOP = 86, DOCK_H = TILE_H + 2 * PAD, ROW_MAX = 5;
     private static final float CARD_W_MAX = 548, CARD_H_MAX = CARD_W_MAX * 9 / 16;
     private float cardW, cardH, shelfTop, cardTop;  // set by layoutShelf() from the Card size setting
-    private static final float GRID_TOP = 1018, GRID_STEP_Y = TILE_H + 84, APPS_SHIFT = 540;
+    private static final float GRID_STEP_Y = TILE_H + 84;
     private static final long HEARTBEAT_MS = 3400;
     private static final long HEARTBEAT_SETTLE_MS = 700;
 
@@ -63,7 +66,7 @@ final class HomeView extends View implements Overlays.Host {
     private final Prefs prefs;
     private final SharedPreferences focusPrefs;
     private final Overlays overlays;
-    private float s = 1;  // screen px per design px
+    private float s = 1, vh = Ui.H;  // screen px per design px; the view's height in design px (1080 at 16:9)
 
     // Data
     private AppStore apps;
@@ -292,6 +295,9 @@ final class HomeView extends View implements Overlays.Host {
 
     @Override protected void onSizeChanged(int w, int h, int ow, int oh) {
         s = w / Ui.W;
+        vh = h / s;
+        overlays.screenHeight(vh);
+        layoutShelf();
         renderScene();
     }
 
@@ -485,7 +491,7 @@ final class HomeView extends View implements Overlays.Host {
     @Override public Bitmap snapshot() {
         Bitmap b = Bitmap.createBitmap(480, 270, Bitmap.Config.ARGB_8888);
         Canvas c = new Canvas(b);
-        c.scale(480 / Ui.W, 270 / Ui.H);
+        c.scale(480 / Ui.W, 270 / vh);
         drawHome(c, SystemClock.uptimeMillis());
         Blur.boxBlur(b, 3, 3);
         return b;
@@ -587,7 +593,7 @@ final class HomeView extends View implements Overlays.Host {
 
     private void drawHome(Canvas c, long now) {
         drawBackground(c);
-        float appsT = Ui.clamp(appsS.x, 0, 1), pageY = -APPS_SHIFT * appsT;
+        float appsT = Ui.clamp(appsS.x, 0, 1), pageY = -appsShift() * appsT;
         c.save();
         c.translate(0, pageY);
         if (appsT < 1) drawShelf(c, 1 - appsT);
@@ -614,7 +620,7 @@ final class HomeView extends View implements Overlays.Host {
     /** A pre-blurred glass fade darkens the top edge as All Apps scrolls underneath the dock. */
     private void drawScrollingTopOverlay(Canvas c, float progress) {
         if (progress <= .001f || deepBlur == null) return;
-        screenRect.set(0, 0, Ui.W, Ui.H);
+        screenRect.set(0, 0, Ui.W, vh);
         int layer = c.saveLayer(0, 0, Ui.W, 270, null);
         bmp.setAlpha(Math.round(215 * progress));
         c.drawBitmap(deepBlur, null, screenRect, bmp);
@@ -664,7 +670,7 @@ final class HomeView extends View implements Overlays.Host {
     private float focusOf(Object key) { Spring sp = focus.get(focusKey(key)); return sp == null ? 0 : sp.x; }
 
     private void drawBackground(Canvas c) {
-        r.set(0, 0, Ui.W, Ui.H);
+        r.set(0, 0, Ui.W, vh);
         if (scene == null) { c.drawColor(Color.BLACK); return; }
         bmp.setAlpha(255);
         c.drawBitmap(scene, null, r, bmp);
@@ -718,7 +724,7 @@ final class HomeView extends View implements Overlays.Host {
     private void drawCredit(Canvas c, float appsT) {
         if (photoCredit == null || appsT > .99f) return;
         creditP.setAlpha(Math.round(Color.alpha(Ui.TEXT_3) * (1 - appsT)));
-        c.drawText(ellipsize(photoCredit, creditP, EDGE_R - EDGE_L - HINT_ROOM), EDGE_R, Ui.H - 38, creditP);  // clears the All Apps hint
+        c.drawText(ellipsize(photoCredit, creditP, EDGE_R - EDGE_L - HINT_ROOM), EDGE_R, vh - 38, creditP);  // clears the All Apps hint
     }
 
     private void drawTopBar(Canvas c) {
@@ -812,7 +818,7 @@ final class HomeView extends View implements Overlays.Host {
         int across = "compact".equals(size) ? 5 : "large".equals(size) ? 3 : 4;  // cards span the dock, edge to edge
         cardW = (DOCK_W - (across - 1) * GAP) / across;
         cardH = cardW * 9 / 16;
-        shelfTop = Math.min(262, DOCK_BOTTOM - TILE_H - 2 * PAD - cardH - 145);
+        shelfTop = Math.min(SHELF_TOP, dockBottom() - DOCK_H - cardH - 145);  // pinned to the top; lifts only on short screens
         cardTop = shelfTop + 50;
     }
 
@@ -824,6 +830,12 @@ final class HomeView extends View implements Overlays.Host {
 
     /** The first recommendation card shares the dock's outer edge. */
     private float shelfLeft() { return EDGE_L; }
+
+    /** The dock's bottom edge: a fixed margin above the bottom of whatever screen this is. */
+    private float dockBottom() { return vh - DOCK_MARGIN; }
+
+    /** How far the page rises in All Apps, so the dock ends up at APPS_DOCK_TOP. */
+    private float appsShift() { return dockBottom() - DOCK_H - APPS_DOCK_TOP; }
 
     /** Bottom row: the All Apps hint on the left edge, the photo credit on the right, never overlapping. */
     private static final float HINT_ROOM = 200;
@@ -875,8 +887,8 @@ final class HomeView extends View implements Overlays.Host {
     private void drawDock(Canvas c, float pageY, float appsT) {
         if (apps == null) return;
         List<AppStore.App> row = apps.row;
-        float dockW = DOCK_W, dockH = TILE_H + 2 * PAD;  // full width between the overscan margins
-        float l = Ui.SAFE_X, t = DOCK_BOTTOM - dockH;
+        float dockW = DOCK_W, dockH = DOCK_H;  // full width between the overscan margins
+        float l = Ui.SAFE_X, t = dockBottom() - dockH;
         dock.set(l, t, l + dockW, t + dockH);
 
         // shadow, then glass: the pre-blurred scene behind the dock, saturated, tinted and lit from above
@@ -885,7 +897,7 @@ final class HomeView extends View implements Overlays.Host {
             Bitmap gb = appsT > 0.5f ? deepBlur : glassBlur;
             BitmapShader gs = shaderFor(gb);
             srcRect.set(0, 0, gb.getWidth(), gb.getHeight());
-            screenRect.set(0, -pageY, Ui.W, Ui.H - pageY);  // the glass shows what is on screen behind it
+            screenRect.set(0, -pageY, Ui.W, vh - pageY);  // the glass shows what is on screen behind it
             m.setRectToRect(srcRect, screenRect, Matrix.ScaleToFit.FILL);
             gs.setLocalMatrix(m);
             glassPaint.setShader(gs);
@@ -945,14 +957,15 @@ final class HomeView extends View implements Overlays.Host {
         List<AppStore.App> rest = apps.rest;
         gridHeadP.setAlpha(Math.round(Color.alpha(Ui.TEXT_2) * alpha));
         c.save();
-        c.clipRect(0, DOCK_BOTTOM + 20, Ui.W, Ui.H + APPS_SHIFT);  // rows scrolling up slide under the dock
-        c.drawText("All Apps", EDGE_L, 966 + 26 - gridScroll.x, gridHeadP);
+        float bottom = dockBottom(), gridTop = bottom + 146, end = vh + appsShift();
+        c.clipRect(0, bottom + 20, Ui.W, end);  // rows scrolling up slide under the dock
+        c.drawText("All Apps", EDGE_L, bottom + 120 - gridScroll.x, gridHeadP);
         int focusedIdx = area == Area.GRID ? gridI : -1;
         for (int pass = 0; pass < 2; pass++) {  // focused tile last, so its shadow lies on top
             for (int i = 0; i < rest.size(); i++) {
                 if ((i == focusedIdx) != (pass == 1)) continue;
-                float x = LEFT + (i % 5) * (TILE_W + GAP), y = GRID_TOP + (i / 5) * GRID_STEP_Y - gridScroll.x;
-                if (y > Ui.H + APPS_SHIFT || y + TILE_H < DOCK_BOTTOM) continue;
+                float x = LEFT + (i % 5) * (TILE_W + GAP), y = gridTop + (i / 5) * GRID_STEP_Y - gridScroll.x;
+                if (y > end || y + TILE_H < bottom) continue;
                 AppStore.App a = rest.get(i);
                 drawTile(c, a, x, y, false, alpha);
                 float f = Ui.clamp(focusOf(a), 0, 1);
@@ -1064,7 +1077,7 @@ final class HomeView extends View implements Overlays.Host {
         float a = (area == Area.ROW && !moving && apps != null && !apps.rest.isEmpty() ? 1 : 0) * Ui.clamp(4.6f - idle, 0, 1) * (1 - appsT);
         if (a <= 0) return;
         hintP.setAlpha(Math.round(Color.alpha(Ui.TEXT_3) * a));
-        float y = Ui.H - 38;
+        float y = vh - 38;
         c.drawText("All Apps", EDGE_L + 22, y, hintP);
         stroke.setShader(null);
         stroke.setStrokeWidth(2.2f);
@@ -1081,7 +1094,7 @@ final class HomeView extends View implements Overlays.Host {
         if (msg == null) return;
         float a = moving ? 1 : Ui.clamp((toastUntil - now) / 300f, 0, 1);
         if (a <= 0) { toast = null; return; }
-        float w = toastP.measureText(msg) + 56, cx = Ui.W / 2, y = Ui.H - 40 - 54;
+        float w = toastP.measureText(msg) + 56, cx = Ui.W / 2, y = vh - 40 - 54;
         r.set(cx - w / 2, y, cx + w / 2, y + 54);
         Shadow.draw(c, r, 27, 16, 8, .4f * a, bmp);
         fill.setShader(null);
