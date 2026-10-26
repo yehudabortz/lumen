@@ -68,7 +68,7 @@ a browser. The arrow keys act as the D-pad, Enter as OK (hold it for the tile me
 6. **Status bar and settings.** Up from the shelf (or the dock) focuses the weather and clock: they sit in a quiet
    glass bar and a gear chip slides in at its end. The chip is the focused control (near-white, lifted, dark gear).
    OK opens Settings as a compact dropdown 12 px below the bar, right edges aligned, as tall as its content, with
-   today's weather (condition, high, low) under the title. Changes preview live. There is no settings tile; the tile
+   today's weather (a condition glyph, the temperature, high and low) under the title. Changes preview live. There is no settings tile; the tile
    menu and the remote's Menu key open the same dropdown.
 7. **Screensaver.** The same scene, full screen, drifting very slowly (a 90 s zoom-and-pan, back and forth), with
    a large clock (150 px SemiBold), the date and the weather at the top right, where Home's clock sits. The text

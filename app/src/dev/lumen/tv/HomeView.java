@@ -489,7 +489,7 @@ final class HomeView extends View implements Overlays.Host {
 
     @Override public String weatherLine() {
         if (!prefs.is(Prefs.WEATHER, "on") || !weather.ready()) return null;
-        return weather.description + " · " + weather.temp + "°  ·  H " + weather.high + "°  L " + weather.low + "°";
+        return weather.temp + "°  ·  H " + weather.high + "°  L " + weather.low + "°";
     }
 
     /** The home screen at quarter size, blurred: the menu's depth of field. */
