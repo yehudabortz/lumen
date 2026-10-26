@@ -42,10 +42,12 @@ final class HomeView extends View implements Overlays.Host {
     }
 
     // ---- Layout (design px) ----
-    private static final float PAD = 40, GAP = 52, TILE_W = AppStore.TILE_W, TILE_H = AppStore.TILE_H;
+    private static final float PAD = 40, GAP = 42, TILE_W = AppStore.TILE_W, TILE_H = AppStore.TILE_H;
     private static final float DOCK_W = Ui.W - 2 * Ui.SAFE_X, LEFT = Ui.SAFE_X + PAD, RIGHT = Ui.W - LEFT;  // ROW_MAX tiles fill the dock exactly; text aligns to the tiles
-    private static final float R_TILE = 20, R_DOCK = R_TILE + PAD, DOCK_SMOOTH = 1, TILE_SMOOTH = 1, DOCK_BOTTOM = 872, ROW_MAX = 5;
-    private static final float CARD_W_MAX = 520, CARD_H_MAX = CARD_W_MAX * 9 / 16;
+    // Tiles and cards use Apple's 60% corner smoothing; the dock's outline is the tiles' outline grown by PAD
+    private static final float R_TILE = 22, TILE_SMOOTH = .6f, R_DOCK = R_TILE + PAD, DOCK_SMOOTH = concentric(R_TILE, TILE_SMOOTH, PAD);
+    private static final float DOCK_BOTTOM = 872, ROW_MAX = 5;
+    private static final float CARD_W_MAX = 522, CARD_H_MAX = CARD_W_MAX * 9 / 16;
     private float cardW, cardH, shelfTop, cardTop;  // set by layoutShelf() from the Card size setting
     private static final float GRID_TOP = 1018, GRID_STEP_Y = TILE_H + 84, APPS_SHIFT = 540;
     private static final long HEARTBEAT_MS = 3400;
@@ -147,7 +149,7 @@ final class HomeView extends View implements Overlays.Host {
         labelDimP = Ui.text(Ui.medium, 23, Ui.TEXT_2, -.01f);
         labelDimP.setTextAlign(Paint.Align.CENTER);
         hintP = Ui.text(Ui.medium, 20, Ui.TEXT_3, 0);
-        hintP.setTextAlign(Paint.Align.CENTER);
+        hintP.setTextAlign(Paint.Align.LEFT);
         gridHeadP = Ui.text(Ui.semibold, 26, Ui.TEXT_2, -.02f);
         nameP = Ui.text(Ui.semibold, 23, Ui.TEXT, -.015f);
         nameP.setTextAlign(Paint.Align.CENTER);
@@ -714,7 +716,7 @@ final class HomeView extends View implements Overlays.Host {
     private void drawCredit(Canvas c, float appsT) {
         if (photoCredit == null || appsT > .99f) return;
         creditP.setAlpha(Math.round(Color.alpha(Ui.TEXT_3) * (1 - appsT)));
-        c.drawText(photoCredit, RIGHT, Ui.H - 38, creditP);
+        c.drawText(ellipsize(photoCredit, creditP, RIGHT - LEFT - HINT_ROOM), RIGHT, Ui.H - 38, creditP);  // clears the All Apps hint
     }
 
     private void drawTopBar(Canvas c) {
@@ -820,6 +822,15 @@ final class HomeView extends View implements Overlays.Host {
     /** The first recommendation card shares the first favorite tile's leading edge. */
     private float shelfLeft() { return LEFT; }
 
+    /** Bottom row: the All Apps hint on the left edge, the photo credit on the right, never overlapping. */
+    private static final float HINT_ROOM = 200;
+
+    /**
+     * Smoothing for a corner `pad` outside one of radius r and smoothing s, so the outer curve begins exactly `pad`
+     * further along the edge (where the inner one's offset does) and the two outlines stay parallel.
+     */
+    private static float concentric(float r, float s, float pad) { return ((1 + s) * r + pad) / (r + pad) - 1; }
+
     private void drawCard(Canvas c, ShelfStore.Item it, float x, float y, int alpha) {
         float f = focusOf(it), sc = (reduced() ? 1 : 1 + .07f * f) * heartbeatScale(f);
         float cx = x + cardW / 2, cy = y + cardH / 2, w = cardW * sc, h = cardH * sc;
@@ -850,11 +861,11 @@ final class HomeView extends View implements Overlays.Host {
         if (prefs.is(Prefs.CARD_TEXT, "none")) return;
         float ty = y + cardH + 34 + 8 * f;
         titleP.setAlpha(Math.round(Color.alpha(Ui.TEXT) * alpha / 255f));
-        c.drawText(ellipsize(it.title, titleP, cardW - 8), x + 4, ty, titleP);
+        c.drawText(ellipsize(it.title, titleP, cardW), x, ty, titleP);
         if (prefs.is(Prefs.CARD_TEXT, "details") && it.line != null && !it.line.isEmpty()) {
             metaP.setColor(Ui.mix(Ui.TEXT_2, Ui.TEXT, f * .5f));
             metaP.setAlpha(Math.round(Color.alpha(metaP.getColor()) * alpha / 255f));
-            c.drawText(ellipsize(it.line, metaP, cardW - 8), x + 4, ty + 28, metaP);
+            c.drawText(ellipsize(it.line, metaP, cardW), x, ty + 28, metaP);
         }
     }
 
@@ -904,6 +915,7 @@ final class HomeView extends View implements Overlays.Host {
         rim(c, dock, R_DOCK, DOCK_SMOOTH, 1);
         spec.target = focusedIdx >= 0 && !row.isEmpty() ? x0 + focusedIdx * (TILE_W + GAP) + TILE_W / 2 : l + dockW / 2;
         if (spec.x == 0) spec.at(spec.target);
+        if (spec.x != spec.target || spec.v != 0) postInvalidateOnAnimation();  // the target is set after step(), so keep frames coming
         float specA = 1 - .65f * appsT;
         glow(c, dock, R_DOCK, DOCK_SMOOTH, spec.x, t + dockH * .006f, 198, dockH * .032f, Math.round(242 * specA));
         glow(c, dock, R_DOCK, DOCK_SMOOTH, spec.x, t, 239, dockH * .42f, Math.round(51 * specA));
@@ -985,7 +997,7 @@ final class HomeView extends View implements Overlays.Host {
             stroke.setStrokeWidth(3);
             stroke.setColor(Color.argb(Math.round(255 * focused), 255, 255, 255));
             rimRect.set(rr.left - 4, rr.top - 4, rr.right + 4, rr.bottom + 4);
-            rrect(c, rimRect, radius + 4, TILE_SMOOTH, stroke);
+            rrect(c, rimRect, radius + 4, concentric(radius, TILE_SMOOTH, 4), stroke);
         }
         stroke.setStrokeWidth(1.2f);
         stroke.setAlpha(255);
@@ -1050,12 +1062,12 @@ final class HomeView extends View implements Overlays.Host {
         if (a <= 0) return;
         hintP.setAlpha(Math.round(Color.alpha(Ui.TEXT_3) * a));
         float y = Ui.H - 38;
-        c.drawText("All Apps", Ui.W / 2 + 14, y, hintP);
+        c.drawText("All Apps", LEFT + 22, y, hintP);
         stroke.setShader(null);
         stroke.setStrokeWidth(2.2f);
         stroke.setStrokeCap(Paint.Cap.ROUND);
         stroke.setColor(Ui.withAlpha(Ui.TEXT_3, a));
-        float hx = Ui.W / 2 - hintP.measureText("All Apps") / 2 - 4, hy = y - 8;
+        float hx = LEFT + 6, hy = y - 8;
         c.drawLine(hx - 6, hy - 3, hx, hy + 3, stroke);
         c.drawLine(hx, hy + 3, hx + 6, hy - 3, stroke);
         if (idle < 4.7f) postInvalidateDelayed(120);  // fade it out, then stop drawing

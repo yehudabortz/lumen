@@ -47,7 +47,7 @@ final class AppStore {
             "com.disney.disneyplus", "com.hulu.livingroomplus", "com.wbd.stream", "com.plexapp.android", "com.peacocktv.peacockandroid", "com.cbs.ott",
             "tv.pluto.android", "com.spotify.tv.android");
     private static final int DEFAULT_ROW = 5;
-    static final float TILE_W = 288, TILE_H = 162;
+    static final float TILE_W = 296, TILE_H = TILE_W * 9 / 16;  // five fill the dock with 42 px gaps
 
     final List<App> all = new ArrayList<>();     // visible apps
     final List<App> hidden = new ArrayList<>();  // hidden from Lumen (still installed)
