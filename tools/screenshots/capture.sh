@@ -39,7 +39,7 @@ PASS=$(sed -n 's/^keystore.password=//p' local.properties)
 "$ADB" -s "$SERIAL" shell pm grant dev.lumen.tv android.permission.READ_TV_LISTINGS
 "$ADB" -s "$SERIAL" shell am force-stop dev.lumen.tv
 "$ADB" -s "$SERIAL" shell am instrument -w dev.lumen.tv.capture/dev.lumen.tv.ScreenshotCapture | tee "$CAPTURE/run.log"
-grep -q 'Captured 14 native Lumen screenshots' "$CAPTURE/run.log" || { echo "Capture failed; see $CAPTURE/run.log" >&2; exit 1; }
+grep -q 'Captured 16 native Lumen screenshots' "$CAPTURE/run.log" || { echo "Capture failed; see $CAPTURE/run.log" >&2; exit 1; }
 "$ADB" -s "$SERIAL" pull /sdcard/Android/data/dev.lumen.tv/files/screenshots/. "$DEST/"
 cp "$ASSETS/fixtures.json" "$DEST/artwork.json"
 echo "Review the native screenshots in $DEST before copying them into docs/design/screens/."

@@ -44,7 +44,8 @@ final class HomeView extends View implements Overlays.Host {
     // ---- Layout (design px) ----
     private static final float LEFT = 185, PAD = 22, GAP = 28, TILE_W = AppStore.TILE_W, TILE_H = AppStore.TILE_H;
     private static final float R_TILE = 20, R_DOCK = R_TILE + PAD, DOCK_BOTTOM = 872, ROW_MAX = 5;
-    private static final float SHELF_TOP = 262, CARD_W = 376, CARD_H = 211, CARD_TOP = SHELF_TOP + 50;
+    private static final float CARD_W_MAX = 520, CARD_H_MAX = CARD_W_MAX * 9 / 16;
+    private float cardW, cardH, shelfTop, cardTop;  // set by layoutShelf() from the Card size setting
     private static final float GRID_TOP = 1018, GRID_STEP_Y = TILE_H + 70, APPS_SHIFT = 540;
     private static final long HEARTBEAT_MS = 3400;
     private static final long HEARTBEAT_SETTLE_MS = 700;
@@ -113,6 +114,7 @@ final class HomeView extends View implements Overlays.Host {
         this.host = host;
         Ui.init(c);
         prefs = new Prefs(c);
+        layoutShelf();
         focusPrefs = c.getSharedPreferences("lumen", Context.MODE_PRIVATE);
         overlays = new Overlays(this);
         setFocusable(true);
@@ -157,7 +159,7 @@ final class HomeView extends View implements Overlays.Host {
         for (Paint p : new Paint[]{clockP, dateP, headP, headAppP, titleP, metaP, labelP, labelDimP, nameP, cardTitleP}) p.setShadowLayer(14, 0, 2, Color.argb(90, 0, 0, 0));
 
         float px = c.getResources().getDisplayMetrics().widthPixels / Ui.W * 1.07f;  // card size on screen, focus zoom included
-        art = new ArtCache(c, Math.round(CARD_W * px), Math.round(CARD_H * px), this::invalidate);
+        art = new ArtCache(c, Math.round(CARD_W_MAX * px), Math.round(CARD_H_MAX * px), this::invalidate);  // largest card size
         weather = new Weather(prefs, this::invalidate);
     }
 
@@ -527,6 +529,7 @@ final class HomeView extends View implements Overlays.Host {
         switch (key) {
             case Prefs.BACKGROUND: case Prefs.TIME_OF_DAY: case Prefs.PHOTOS: renderScene(); break;
             case Prefs.SHELF: case Prefs.SHELF_OFF: refreshShelf(); break;
+            case Prefs.CARD_SIZE: layoutShelf(); cardScroll.at(cardScrollTarget()); break;
             case Prefs.UNITS: case Prefs.PAGE_LOCATION: weather.refresh(); break;
             case Prefs.WEATHER: if (prefs.is(Prefs.WEATHER, "on")) weather.refresh(); break;
             case Prefs.CLOCK: clockMinute = -1; break;
@@ -621,7 +624,7 @@ final class HomeView extends View implements Overlays.Host {
             for (int i = 0; i < apps.rest.size(); i++) a |= ease(apps.rest.get(i), area == Area.GRID && i == gridI, dt);
         }
         if (shelf != null) {
-            cardScroll.target = Math.max(0, cardI - 3) * (CARD_W + GAP);
+            cardScroll.target = cardScrollTarget();
             a |= cardScroll.step(dt);
             for (int i = 0; i < shelf.items.size(); i++) a |= ease(shelf.items.get(i), area == Area.SHELF && i == cardI, dt);
         }
@@ -769,17 +772,32 @@ final class HomeView extends View implements Overlays.Host {
         headAppP.setAlpha(Math.round(Color.alpha(Ui.TEXT_2) * alpha));
         float left = shelfLeft();
         String suffix = shelf.app != null ? " · " + shelf.app : " · across your apps";
-        c.drawText(shelf.heading, left, SHELF_TOP + 25, headP);
-        c.drawText(suffix, left + headP.measureText(shelf.heading), SHELF_TOP + 25, headAppP);
+        c.drawText(shelf.heading, left, shelfTop + 25, headP);
+        c.drawText(suffix, left + headP.measureText(shelf.heading), shelfTop + 25, headAppP);
         // the focused card draws last, so its shadow lies over its neighbours
         int focusedIdx = area == Area.SHELF ? cardI : -1;
         for (int i = 0; i < shelf.items.size(); i++) {
             if (i == focusedIdx) continue;
-            float x = left + i * (CARD_W + GAP) - cardScroll.x;
-            if (x > Ui.W + 40 || x + CARD_W < -40) continue;
-            drawCard(c, shelf.items.get(i), x, CARD_TOP, a);
+            float x = left + i * (cardW + GAP) - cardScroll.x;
+            if (x > Ui.W + 40 || x + cardW < -40) continue;
+            drawCard(c, shelf.items.get(i), x, cardTop, a);
         }
-        if (focusedIdx >= 0) drawCard(c, shelf.items.get(focusedIdx), left + focusedIdx * (CARD_W + GAP) - cardScroll.x, CARD_TOP, a);
+        if (focusedIdx >= 0) drawCard(c, shelf.items.get(focusedIdx), left + focusedIdx * (cardW + GAP) - cardScroll.x, cardTop, a);
+    }
+
+    /** Card geometry for the Card size setting. Large cards lift the shelf so their text clears the dock. */
+    private void layoutShelf() {
+        String size = prefs.get(Prefs.CARD_SIZE);
+        cardW = "compact".equals(size) ? 300 : "large".equals(size) ? CARD_W_MAX : 376;
+        cardH = cardW * 9 / 16;
+        shelfTop = Math.min(262, DOCK_BOTTOM - TILE_H - 2 * PAD - cardH - 145);
+        cardTop = shelfTop + 50;
+    }
+
+    /** Scrolls only once focus passes the last card that fits on screen. */
+    private float cardScrollTarget() {
+        int visible = Math.max(1, (int) ((Ui.W - 96 - shelfLeft() + GAP) / (cardW + GAP)));
+        return Math.max(0, cardI - (visible - 1)) * (cardW + GAP);
     }
 
     /** The first recommendation card shares the first favorite tile's leading edge. */
@@ -791,7 +809,7 @@ final class HomeView extends View implements Overlays.Host {
 
     private void drawCard(Canvas c, ShelfStore.Item it, float x, float y, int alpha) {
         float f = focusOf(it), sc = (reduced() ? 1 : 1 + .07f * f) * heartbeatScale(f);
-        float cx = x + CARD_W / 2, cy = y + CARD_H / 2, w = CARD_W * sc, h = CARD_H * sc;
+        float cx = x + cardW / 2, cy = y + cardH / 2, w = cardW * sc, h = cardH * sc;
         r.set(cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2);
         Shadow.draw(c, r, R_TILE * sc, Ui.lerp(12, 20, f), Ui.lerp(8, 20, f), Ui.lerp(.38f, .58f, f) * alpha / 255f, bmp);
         Bitmap b = art.get(it.art);
@@ -816,13 +834,14 @@ final class HomeView extends View implements Overlays.Host {
             fill.setColor(Color.argb(alpha, 255, 255, 255));
             rrect(c, bl, by - 5, bl + (br - bl) * it.progress, by, 3, fill);
         }
-        float ty = y + CARD_H + 34 + 8 * f;
+        if (prefs.is(Prefs.CARD_TEXT, "none")) return;
+        float ty = y + cardH + 34 + 8 * f;
         titleP.setAlpha(Math.round(Color.alpha(Ui.TEXT) * alpha / 255f));
-        c.drawText(ellipsize(it.title, titleP, CARD_W - 8), x + 4, ty, titleP);
-        if (it.line != null && !it.line.isEmpty()) {
+        c.drawText(ellipsize(it.title, titleP, cardW - 8), x + 4, ty, titleP);
+        if (prefs.is(Prefs.CARD_TEXT, "details") && it.line != null && !it.line.isEmpty()) {
             metaP.setColor(Ui.mix(Ui.TEXT_2, Ui.TEXT, f * .5f));
             metaP.setAlpha(Math.round(Color.alpha(metaP.getColor()) * alpha / 255f));
-            c.drawText(ellipsize(it.line, metaP, CARD_W - 8), x + 4, ty + 28, metaP);
+            c.drawText(ellipsize(it.line, metaP, cardW - 8), x + 4, ty + 28, metaP);
         }
     }
 
