@@ -43,8 +43,8 @@ final class HomeView extends View implements Overlays.Host {
 
     // ---- Layout (design px) ----
     private static final float PAD = 40, GAP = 52, TILE_W = AppStore.TILE_W, TILE_H = AppStore.TILE_H;
-    private static final float DOCK_W = Ui.W - 2 * Ui.SAFE_X, LEFT = Ui.SAFE_X + PAD;  // ROW_MAX tiles fill the dock exactly
-    private static final float R_TILE = 20, R_DOCK = R_TILE + PAD, DOCK_SMOOTH = 1, DOCK_BOTTOM = 872, ROW_MAX = 5;
+    private static final float DOCK_W = Ui.W - 2 * Ui.SAFE_X, LEFT = Ui.SAFE_X + PAD, RIGHT = Ui.W - LEFT;  // ROW_MAX tiles fill the dock exactly; text aligns to the tiles
+    private static final float R_TILE = 20, R_DOCK = R_TILE + PAD, DOCK_SMOOTH = 1, TILE_SMOOTH = 1, DOCK_BOTTOM = 872, ROW_MAX = 5;
     private static final float CARD_W_MAX = 520, CARD_H_MAX = CARD_W_MAX * 9 / 16;
     private float cardW, cardH, shelfTop, cardTop;  // set by layoutShelf() from the Card size setting
     private static final float GRID_TOP = 1018, GRID_STEP_Y = TILE_H + 84, APPS_SHIFT = 540;
@@ -714,7 +714,7 @@ final class HomeView extends View implements Overlays.Host {
     private void drawCredit(Canvas c, float appsT) {
         if (photoCredit == null || appsT > .99f) return;
         creditP.setAlpha(Math.round(Color.alpha(Ui.TEXT_3) * (1 - appsT)));
-        c.drawText(photoCredit, Ui.W - Ui.SAFE_X, Ui.H - 38, creditP);
+        c.drawText(photoCredit, RIGHT, Ui.H - 38, creditP);
     }
 
     private void drawTopBar(Canvas c) {
@@ -731,7 +731,7 @@ final class HomeView extends View implements Overlays.Host {
         float f = focusOf(STATUS_KEY), fc = Ui.clamp(f, 0, 1);
         final float R = Ui.BAR_RIGHT, cy = Ui.BAR_TOP + Ui.BAR_H / 2, sep = 14, hair = 1.5f;
         float chipD = Ui.CHIP_D, gearRoom = Ui.CHIP_INSET + chipD + sep + hair + sep;  // what the chip adds on the right
-        float x = R - Ui.TEXT_INSET - (gearRoom - Ui.TEXT_INSET) * fc;          // right edge of the text content
+        float x = RIGHT - (RIGHT - R + gearRoom) * fc;  // right edge of the text: the tiles' edge at rest, inside the pill focused
 
         float clockW = showClock ? clockP.measureText(clockText) : 0;
         String t = showWx ? weather.temp + "°" : null;
@@ -762,7 +762,7 @@ final class HomeView extends View implements Overlays.Host {
             clockP.setAlpha(255);
             c.drawText(clockText, x, cy + .36f * clockP.getTextSize(), clockP);
             if (prefs.is(Prefs.DATE, "on") && overlays.mode != Overlays.PANEL)
-                c.drawText(DateFormat.format("EEEE, MMMM d", now).toString(), R - Ui.TEXT_INSET, Ui.BAR_TOP + Ui.BAR_H + 30, dateP);
+                c.drawText(DateFormat.format("EEEE, MMMM d", now).toString(), RIGHT, Ui.BAR_TOP + Ui.BAR_H + 30, dateP);
             x -= clockW;
         }
         if (!showWx) return;
@@ -789,13 +789,16 @@ final class HomeView extends View implements Overlays.Host {
         c.drawText(suffix, left + headP.measureText(shelf.heading), shelfTop + 25, headAppP);
         // the focused card draws last, so its shadow lies over its neighbours
         int focusedIdx = area == Area.SHELF ? cardI : -1;
+        c.save();
+        c.clipRect(Ui.SAFE_X, -Ui.H, Ui.W - Ui.SAFE_X, 2 * Ui.H);  // cards end with the dock, not at the screen edge
         for (int i = 0; i < shelf.items.size(); i++) {
             if (i == focusedIdx) continue;
             float x = left + i * (cardW + GAP) - cardScroll.x;
-            if (x > Ui.W + 40 || x + cardW < -40) continue;
+            if (x > Ui.W - Ui.SAFE_X || x + cardW < Ui.SAFE_X) continue;
             drawCard(c, shelf.items.get(i), x, cardTop, a);
         }
         if (focusedIdx >= 0) drawCard(c, shelf.items.get(focusedIdx), left + focusedIdx * (cardW + GAP) - cardScroll.x, cardTop, a);
+        c.restore();
     }
 
     /** Card geometry for the Card size setting. Large cards lift the shelf so their text clears the dock. */
@@ -828,7 +831,7 @@ final class HomeView extends View implements Overlays.Host {
         } else {  // artwork still loading, or none: a quiet card with the title
             fill.setShader(null);
             fill.setColor(Color.argb(Math.round(.9f * alpha), 38, 40, 50));
-            rrect(c, r, R_TILE * sc, fill);
+            rrect(c, r, R_TILE * sc, TILE_SMOOTH, fill);
             cardTitleP.setAlpha(alpha);
             c.save();
             c.clipRect(r);
@@ -961,12 +964,12 @@ final class HomeView extends View implements Overlays.Host {
         c.restore();
     }
 
-    /** Static top light and a crisp focus ring shared by apps and recommendations. */
+    /** Static top light and a crisp focus ring shared by apps and recommendations, all with smoothed corners. */
     private void tileFinish(Canvas c, RectF rr, float radius, float f, int alpha) {
         if (f > 0.01f) {
             fill.setColor(Color.WHITE);
             unit(fill, sheenU, rr.top, rr.height(), Math.round(255 * Ui.clamp(f, 0, 1) * alpha / 255f));
-            rrect(c, rr, radius, fill);
+            rrect(c, rr, radius, TILE_SMOOTH, fill);
             fill.setShader(null);
             fill.setAlpha(255);
         }
@@ -975,12 +978,14 @@ final class HomeView extends View implements Overlays.Host {
         stroke.setShader(null);
         stroke.setAlpha(255);
         stroke.setColor(Color.argb(Math.round(28 * alpha / 255f), 255, 255, 255));
-        rrect(c, rr.left + .6f, rr.top + .6f, rr.right - .6f, rr.bottom - .6f, radius, stroke);
+        rimRect.set(rr.left + .6f, rr.top + .6f, rr.right - .6f, rr.bottom - .6f);
+        rrect(c, rimRect, radius - .6f, TILE_SMOOTH, stroke);
         float focused = Ui.clamp(f, 0, 1) * alpha / 255f;
         if (focused > .01f) {
             stroke.setStrokeWidth(3);
             stroke.setColor(Color.argb(Math.round(255 * focused), 255, 255, 255));
-            rrect(c, rr.left - 4, rr.top - 4, rr.right + 4, rr.bottom + 4, radius + 4, stroke);
+            rimRect.set(rr.left - 4, rr.top - 4, rr.right + 4, rr.bottom + 4);
+            rrect(c, rimRect, radius + 4, TILE_SMOOTH, stroke);
         }
         stroke.setStrokeWidth(1.2f);
         stroke.setAlpha(255);
@@ -993,7 +998,7 @@ final class HomeView extends View implements Overlays.Host {
         sh.setLocalMatrix(m);
         bmp.setShader(sh);
         bmp.setAlpha(alpha);
-        rrect(c, rr, radius, bmp);
+        rrect(c, rr, radius, TILE_SMOOTH, bmp);
         bmp.setShader(null);
         bmp.setAlpha(255);
     }
