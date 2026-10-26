@@ -71,8 +71,9 @@ a browser. The arrow keys act as the D-pad, Enter as OK (hold it for the tile me
    today's weather (condition, high, low) under the title. Changes preview live. There is no settings tile; the tile
    menu and the remote's Menu key open the same dropdown.
 7. **Screensaver.** The same scene, full screen, drifting very slowly (a 90 s zoom-and-pan, back and forth), with
-   a large clock (150 px SemiBold), the date and the weather at the bottom left. The text block moves to a new spot
-   every few minutes so nothing burns into OLED panels. It fades in over 450 ms; new photos crossfade over 2.5 s.
+   a large clock (150 px SemiBold), the date and the weather at the top right, where Home's clock sits. The text
+   block moves to the next corner every four minutes so nothing burns into OLED panels, fading out and in over
+   600 ms. It fades in with the first picture over 450 ms; new photos crossfade over 2.5 s.
    Any key wakes the TV straight back to Home.
 
 ## Content: where the shelf comes from
