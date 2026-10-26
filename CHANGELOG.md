@@ -11,6 +11,7 @@
 - MIT licensing, source notices, privacy/contribution/security documentation and CI checks.
 - Top Shelf view options: Standard, Large or Compact cards, and title-and-details, title-only or no card text.
 - Weather attribution links in Settings; removed the unused Unsplash integration and API-key embedding.
+- Full-width dock with roomier tiles; the Top Shelf and All Apps share its columns, and the clock and weather lift away in All Apps.
 
 Known limitations: cinematic mode, selectable tile sizes and bundled Inter remain planned. Device vendors
 differ in default-launcher, TV-listings and screensaver behavior. NASA's metadata and exposure filtering

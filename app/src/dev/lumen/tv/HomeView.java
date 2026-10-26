@@ -42,11 +42,12 @@ final class HomeView extends View implements Overlays.Host {
     }
 
     // ---- Layout (design px) ----
-    private static final float LEFT = 185, PAD = 22, GAP = 28, TILE_W = AppStore.TILE_W, TILE_H = AppStore.TILE_H;
+    private static final float PAD = 40, GAP = 52, TILE_W = AppStore.TILE_W, TILE_H = AppStore.TILE_H;
+    private static final float DOCK_W = Ui.W - 2 * Ui.SAFE_X, LEFT = Ui.SAFE_X + PAD;  // ROW_MAX tiles fill the dock exactly
     private static final float R_TILE = 20, R_DOCK = R_TILE + PAD, DOCK_BOTTOM = 872, ROW_MAX = 5;
     private static final float CARD_W_MAX = 520, CARD_H_MAX = CARD_W_MAX * 9 / 16;
     private float cardW, cardH, shelfTop, cardTop;  // set by layoutShelf() from the Card size setting
-    private static final float GRID_TOP = 1018, GRID_STEP_Y = TILE_H + 70, APPS_SHIFT = 540;
+    private static final float GRID_TOP = 1018, GRID_STEP_Y = TILE_H + 84, APPS_SHIFT = 540;
     private static final long HEARTBEAT_MS = 3400;
     private static final long HEARTBEAT_SETTLE_MS = 700;
 
@@ -79,7 +80,7 @@ final class HomeView extends View implements Overlays.Host {
     private int rowI, cardI, gridI;
     private boolean moving;
     private final Spring appsS = new Spring(1.9f, .95f), rowScroll = new Spring(2.3f, 1f), cardScroll = new Spring(2.3f, 1f),
-            gridScroll = new Spring(2.3f, 1f), spec = new Spring(2.1f, .88f);
+            gridScroll = new Spring(2.3f, 1f), spec = new Spring(2.1f, .88f), barHide = new Spring(2.1f, 1f);
     private final Map<Object, Spring> focus = new HashMap<>();
     private boolean returningHome = true, heartbeatArmed;
     private long lastFrame, lastKey, toastUntil, heartbeatEpoch = SystemClock.uptimeMillis();
@@ -590,12 +591,23 @@ final class HomeView extends View implements Overlays.Host {
         if (appsT > 0.001f) drawGrid(c, appsT);
         c.restore();
         drawScrollingTopOverlay(c, appsT);
-        drawTopBar(c);
+        drawTopBarHiding(c);
         if (!overlays.visible()) drawHint(c, now, appsT);
         drawCredit(c, appsT);
     }
 
-    /** A pre-blurred glass fade keeps the clock and date above the dock as All Apps scrolls underneath. */
+    /** In All Apps the clock and weather lift up and fade out, leaving the dock alone at the top; Up brings them back. */
+    private void drawTopBarHiding(Canvas c) {
+        float hide = Ui.clamp(barHide.x, 0, 1);
+        if (hide > .999f) return;
+        if (hide < .001f) { drawTopBar(c); return; }
+        int layer = c.saveLayerAlpha(0, 0, Ui.W, 270, Math.round(255 * (1 - hide)));
+        if (!reduced()) c.translate(0, -(Ui.BAR_TOP + Ui.BAR_H) * hide);
+        drawTopBar(c);
+        c.restoreToCount(layer);
+    }
+
+    /** A pre-blurred glass fade darkens the top edge as All Apps scrolls underneath the dock. */
     private void drawScrollingTopOverlay(Canvas c, float progress) {
         if (progress <= .001f || deepBlur == null) return;
         screenRect.set(0, 0, Ui.W, Ui.H);
@@ -629,7 +641,8 @@ final class HomeView extends View implements Overlays.Host {
             for (int i = 0; i < shelf.items.size(); i++) a |= ease(shelf.items.get(i), area == Area.SHELF && i == cardI, dt);
         }
         a |= ease(STATUS_KEY, area == Area.STATUS, dt);
-        a |= spec.step(dt);
+        barHide.target = area == Area.GRID ? 1 : 0;  // keyed to focus, so Up to settings from a rowless grid still shows it
+        a |= barHide.step(dt) | spec.step(dt);
         return a;
     }
 
@@ -788,7 +801,8 @@ final class HomeView extends View implements Overlays.Host {
     /** Card geometry for the Card size setting. Large cards lift the shelf so their text clears the dock. */
     private void layoutShelf() {
         String size = prefs.get(Prefs.CARD_SIZE);
-        cardW = "compact".equals(size) ? 300 : "large".equals(size) ? CARD_W_MAX : 376;
+        int across = "compact".equals(size) ? 5 : "large".equals(size) ? 3 : 4;  // cards span the dock's tile columns
+        cardW = (DOCK_W - 2 * PAD - (across - 1) * GAP) / across;
         cardH = cardW * 9 / 16;
         shelfTop = Math.min(262, DOCK_BOTTOM - TILE_H - 2 * PAD - cardH - 145);
         cardTop = shelfTop + 50;
@@ -796,16 +810,12 @@ final class HomeView extends View implements Overlays.Host {
 
     /** Scrolls only once focus passes the last card that fits on screen. */
     private float cardScrollTarget() {
-        int visible = Math.max(1, (int) ((Ui.W - 96 - shelfLeft() + GAP) / (cardW + GAP)));
+        int visible = Math.max(1, (int) ((Ui.W - Ui.SAFE_X - LEFT + GAP) / (cardW + GAP)));
         return Math.max(0, cardI - (visible - 1)) * (cardW + GAP);
     }
 
     /** The first recommendation card shares the first favorite tile's leading edge. */
-    private float shelfLeft() {
-        int n = apps == null ? 1 : Math.max(1, Math.min(apps.row.size(), (int) ROW_MAX));
-        float width = n * TILE_W + (n - 1) * GAP + 2 * PAD;
-        return (Ui.W - width) / 2;
-    }
+    private float shelfLeft() { return LEFT; }
 
     private void drawCard(Canvas c, ShelfStore.Item it, float x, float y, int alpha) {
         float f = focusOf(it), sc = (reduced() ? 1 : 1 + .07f * f) * heartbeatScale(f);
@@ -848,9 +858,8 @@ final class HomeView extends View implements Overlays.Host {
     private void drawDock(Canvas c, float pageY, float appsT) {
         if (apps == null) return;
         List<AppStore.App> row = apps.row;
-        int n = (int) Math.max(1, Math.min(row.size(), ROW_MAX));
-        float dockW = n * TILE_W + (n - 1) * GAP + 2 * PAD, dockH = TILE_H + 2 * PAD;
-        float l = (Ui.W - dockW) / 2, t = DOCK_BOTTOM - dockH;
+        float dockW = DOCK_W, dockH = TILE_H + 2 * PAD;  // full width between the overscan margins
+        float l = Ui.SAFE_X, t = DOCK_BOTTOM - dockH;
         dock.set(l, t, l + dockW, t + dockH);
 
         // shadow, then glass: the pre-blurred scene behind the dock, saturated, tinted and lit from above
