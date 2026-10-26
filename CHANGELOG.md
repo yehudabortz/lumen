@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.0.1
 
 - The drawn backgrounds are now ten grainy gradients (Horizon, Sorbet, Beam, Ember, Aurora, Dusk, Lagoon, Midnight,
   Citrus, Rose) in place of the Alpine, Forest, Dunes and Coast landscapes. A saved landscape moves to the nearest
