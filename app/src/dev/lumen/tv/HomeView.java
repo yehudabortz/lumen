@@ -11,8 +11,6 @@ import android.graphics.ColorMatrixColorFilter;
 import android.graphics.LinearGradient;
 import android.graphics.Matrix;
 import android.graphics.Paint;
-import android.graphics.PorterDuff;
-import android.graphics.PorterDuffXfermode;
 import android.graphics.RadialGradient;
 import android.graphics.RectF;
 import android.graphics.Shader;
@@ -111,10 +109,6 @@ final class HomeView extends View implements Overlays.Host {
     private final LinearGradient dockTintU = new LinearGradient(0, 0, 0, 1,
             new int[]{Color.argb(22, 255, 255, 255), Color.argb(9, 255, 255, 255), Color.argb(5, 255, 255, 255)}, new float[]{0, .5f, 1}, Shader.TileMode.CLAMP);
     private final LinearGradient dockSheenU = new LinearGradient(0, 0, 0, 1, Color.argb(18, 255, 255, 255), WHITE_0, Shader.TileMode.CLAMP);
-    private final LinearGradient scrollFade = new LinearGradient(0, 0, 0, 270,
-            new int[]{Color.argb(42, 255, 255, 255), Color.argb(26, 255, 255, 255), Color.argb(12, 255, 255, 255), 0},
-            new float[]{0, .38f, .7f, 1}, Shader.TileMode.CLAMP);
-    private final Paint scrollMask = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RadialGradient glowU = new RadialGradient(0, 0, 1, Color.WHITE, WHITE_0, Shader.TileMode.CLAMP);
 
     HomeView(Context c, Host host) {
@@ -161,9 +155,6 @@ final class HomeView extends View implements Overlays.Host {
         cardTitleP = Ui.text(Ui.bold, 30, Ui.TEXT, -.03f);
         toastP = Ui.text(Ui.medium, 22, Ui.TEXT, -.01f);
         toastP.setTextAlign(Paint.Align.CENTER);
-        scrollMask.setShader(new LinearGradient(0, 0, 0, 270,
-                new int[]{Color.WHITE, Color.WHITE, 0}, new float[]{0, .48f, 1}, Shader.TileMode.CLAMP));
-        scrollMask.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.DST_IN));
         for (Paint p : new Paint[]{clockP, dateP, headP, headAppP, titleP, metaP, labelP, labelDimP, nameP, cardTitleP}) p.setShadowLayer(14, 0, 2, Color.argb(90, 0, 0, 0));
 
         float px = c.getResources().getDisplayMetrics().widthPixels / Ui.W * 1.07f;  // card size on screen, focus zoom included
@@ -603,7 +594,6 @@ final class HomeView extends View implements Overlays.Host {
         drawDock(c, pageY, appsT);
         if (appsT > 0.001f) drawGrid(c, appsT);
         c.restore();
-        drawScrollingTopOverlay(c, appsT);
         drawTopBarHiding(c);
         if (!overlays.visible()) drawHint(c, now, appsT);
         drawCredit(c, appsT);
@@ -618,23 +608,6 @@ final class HomeView extends View implements Overlays.Host {
         if (!reduced()) c.translate(0, -(Ui.BAR_TOP + Ui.BAR_H) * hide);
         drawTopBar(c);
         c.restoreToCount(layer);
-    }
-
-    /** A pre-blurred glass fade darkens the top edge as All Apps scrolls underneath the dock. */
-    private void drawScrollingTopOverlay(Canvas c, float progress) {
-        if (progress <= .001f || deepBlur == null) return;
-        screenRect.set(0, 0, Ui.W, vh);
-        int layer = c.saveLayer(0, 0, Ui.W, 270, null);
-        bmp.setAlpha(Math.round(215 * progress));
-        c.drawBitmap(deepBlur, null, screenRect, bmp);
-        c.drawRect(0, 0, Ui.W, 270, scrollMask);
-        c.restoreToCount(layer);
-        bmp.setAlpha(255);
-        fill.setShader(scrollFade);
-        fill.setAlpha(Math.round(255 * progress));
-        c.drawRect(0, 0, Ui.W, 270, fill);
-        fill.setShader(null);
-        fill.setAlpha(255);
     }
 
     /** Advances every spring; returns true while anything is still moving. */

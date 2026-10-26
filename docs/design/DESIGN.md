@@ -46,7 +46,7 @@ a browser. The arrow keys act as the D-pad, Enter as OK (hold it for the tile me
 | Tiles | 16:9, radius 22 px. Medium 296×166.5 px (default, five across), Small 232×130 (six), Large 376×211 (four) |
 | Focus | A crisp white 3 px focus ring, with a 2.5 px gap and no glow or dark edge on apps and recommendation cards, plus scale 1.09 (cards 1.07) over 240 ms, deep soft shadow and a low-contrast, static top-light sheen. Focused tiles and cards add a softly eased 0.4% double-beat pulse every 3.4 s; it starts only after D-pad navigation. Home restores stable focus by app/content identity at rest, without a zoom replay or entry pulse. Focus springs are critically damped. Reduced motion and open menus pause it. The dock's specular highlight slides to sit above the focused tile |
 | Label | Focused tile only (default). 25 px SemiBold, 22 px under the dock |
-| Legibility | A dark vignette behind the clock and along the bottom, plus a soft band behind the shelf that strengthens on bright daytime scenes. During the All Apps scroll, the clock, weather and date lift up and fade out (fade only with Reduced motion) and a pre-blurred gradient darkens the top edge above the moving dock |
+| Legibility | A dark vignette behind the clock and along the bottom, plus a soft band behind the shelf that strengthens on bright daytime scenes. During the All Apps scroll, the clock, weather and date lift up and fade out (fade only with Reduced motion); nothing is laid over the dock |
 
 ## Screens
 
@@ -58,8 +58,8 @@ a browser. The arrow keys act as the D-pad, Enter as OK (hold it for the tile me
 3. **Cinematic.** Up from the dock moves focus into the shelf. The focused item's artwork fills the screen behind a
    dark gradient, with the app name, the title, year · rating · genre, a two-line synopsis and *Resume*/*Play*.
    The dock slides away and the cards settle at the bottom. Back or Down returns home.
-4. **All Apps.** Down from the dock: the shelf fades, the page scrolls up, and the dock passes behind a blurred,
-   fading glass gradient. The clock and date remain crisp above it. The background blurs (64 px), saturates and dims
+4. **All Apps.** Down from the dock: the shelf fades, the page scrolls up, and the dock rises to the top with
+   nothing laid over it while the clock and weather lift away. The background blurs (64 px), saturates and dims
    to half, and a five-column grid aligned with the dock's tiles appears. Back returns to the dock; Back again
    starts the screensaver.
 5. **Tile menu.** Long-press OK on a tile: *Move* · *Add to/Remove from Top Row* · *Show in Top Shelf* · *Hide* ·
