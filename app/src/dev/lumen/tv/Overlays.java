@@ -33,7 +33,7 @@ final class Overlays {
         void chooseLocation();
         void sources();
         void panelOpened();        // focus moves to the clock-and-weather pill the dropdown hangs from
-        String weatherLine();      // "Partly cloudy · 62° · H 68° L 51°", or null
+        String weatherLine();      // "62° · H 68° L 51°", or null; the condition is shown by its glyph
         String weatherKind();
         void redraw();
     }
@@ -67,7 +67,9 @@ final class Overlays {
     private int closingMode = NONE;
     private LinearGradient fade;
     private final android.graphics.Path clipPath = new android.graphics.Path();
-    private final Spring open = new Spring(3f, .9f), scroll = new Spring(3f, 1f), pill = new Spring(4f, .85f);
+    // Overlays open with a hint of life and close briskly, with no bounce
+    private static final float OPEN_HZ = 3.4f, OPEN_DAMPING = .8f, CLOSE_HZ = 5f;
+    private final Spring open = new Spring(OPEN_HZ, OPEN_DAMPING), scroll = new Spring(3f, 1f), pill = new Spring(4f, .85f);
 
     // menu
     private AppStore.App target;
@@ -85,6 +87,7 @@ final class Overlays {
     private final android.text.TextPaint ellipsizeP = new android.text.TextPaint();
     private final Paint titleP, nameP, subP, rowP, valueP, headP, noteP;
     private final RectF pillRect = new RectF(), r = new RectF(), src = new RectF(), screen = new RectF(0, 0, Ui.W, Ui.H);
+    private float screenH = Ui.H;  // the home view's height in design px
     private final Matrix m = new Matrix();
     private Bitmap shaderBitmap;
     private BitmapShader shader;
@@ -105,6 +108,9 @@ final class Overlays {
         noteP = Ui.text(Ui.medium, 20, Ui.TEXT_2, -.005f);
     }
 
+    /** Follows the home view's real height, so menus center and panels fit on any screen. */
+    void screenHeight(float h) { screenH = h; screen.set(0, 0, Ui.W, h); }
+
     boolean isOpen() { return mode != NONE; }
 
     /** True while an overlay is on screen, including its closing animation. */
@@ -120,7 +126,7 @@ final class Overlays {
         itemI = 0;
         pill.at(itemI);
         mode = closingMode = MENU;
-        open.target = 1;
+        open.tune(OPEN_HZ, OPEN_DAMPING).target = 1;
         host.redraw();
     }
 
@@ -132,14 +138,14 @@ final class Overlays {
         scroll.at(0);
         pill.at(rowI);
         mode = closingMode = PANEL;
-        open.target = 1;
+        open.tune(OPEN_HZ, OPEN_DAMPING).target = 1;
         host.panelOpened();
         host.redraw();
     }
 
     void close() {
         mode = NONE;
-        open.target = 0;
+        open.tune(CLOSE_HZ, 1f).target = 0;
         host.redraw();
     }
 
@@ -147,7 +153,7 @@ final class Overlays {
         items.clear();
         final AppStore.App a = target;
         Prefs p = host.prefs();
-        if (targetInRow) items.add(new Item("Move", "move", null, () -> { close(); host.moveTile(a); }));
+        items.add(new Item("Move", "move", null, () -> { close(); host.moveTile(a); }));
         items.add(new Item(targetInRow ? "Remove from Top Row" : "Add to Top Row", targetInRow ? "remove" : "add", null, () -> { close(); host.toggleRow(a); }));
         items.add(new Item("Show in Top Shelf", "shelf", p.contains(Prefs.SHELF_OFF, a.pkg) ? "Off" : "On", () -> {
             p.toggle(Prefs.SHELF_OFF, a.pkg);
@@ -351,7 +357,7 @@ final class Overlays {
         c.drawRect(screen, fill);
 
         final float header = 24 + 56 + 24;  // 24 · app tile (56) · 24, then a hairline
-        float w = 560, h = header + 1 + 8 + ROW * items.size() + PAD, cx = Ui.W / 2, cy = Ui.H * .42f + (1 - t) * 12;
+        float w = 560, h = header + 1 + 8 + ROW * items.size() + PAD, cx = Ui.W / 2, cy = screenH * .42f + (1 - t) * 12;
         float sc = .95f + .05f * t;
         c.save();
         c.scale(sc, sc, cx, cy);
@@ -418,7 +424,7 @@ final class Overlays {
         }
         float contentH = y + PAD;
         float w = 600, right = Ui.BAR_RIGHT, x = right - w, top = Ui.BAR_TOP + Ui.BAR_H + Ui.DROPDOWN_GAP;
-        float h = Math.min(contentH, Ui.H - 48 - top), bottom = top + h;
+        float h = Math.min(contentH, screenH - 48 - top), bottom = top + h;
 
         if (!rows.isEmpty()) {  // keep the focused row in view
             float rowTop = ys[rowI], rowBottom = rowTop + ROW, visible = h - PAD;
@@ -428,13 +434,16 @@ final class Overlays {
             if (rowI == lastFocusable()) scroll.target = Math.max(0, contentH - h);  // reveal the notes below
         }
 
-        // grows out of the gear chip
-        float sc = .92f + .08f * t;
+        // grows out of the gear chip, opaque early so it never looks ghostly mid-grow, and settles with the
+        // spring's slight overshoot; closing, it shrinks only a little and is mostly a quick fade
+        boolean closing = mode == NONE;
+        float sc = closing ? .96f + .04f * t : .9f + .1f * Math.min(open.x, 1.02f);
+        float opacity = closing ? t : Ui.clamp(t / .45f, 0, 1);
         c.save();
         c.scale(sc, sc, right - Ui.CHIP_INSET - Ui.CHIP_D / 2, Ui.BAR_TOP + Ui.BAR_H / 2);
         r.set(x, top, right, bottom);
-        boolean fading = t < .99f;
-        if (fading) c.saveLayerAlpha(r.left - 120, r.top - 120, r.right + 120, r.bottom + 160, Math.round(255 * t));
+        boolean fading = opacity < .99f;
+        if (fading) c.saveLayerAlpha(r.left - 120, r.top - 120, r.right + 120, r.bottom + 160, Math.round(255 * opacity));
         panelGlass(c, r, Ui.MENU_R, host.liveBackdrop(), 1);
         c.save();
         c.clipRect(r);
@@ -445,9 +454,9 @@ final class Overlays {
         c.drawText(title, x + IN, 28 + 34 * .73f, titleP);
         if (wxLine != null) {
             float wy = 28 + 34 + 10 + 13;  // centre of the weather line
-            Glyphs.weather(c, host.weatherKind(), x + IN + 12, wy, 12, fill, stroke);
+            Glyphs.weather(c, host.weatherKind(), x + IN + 14, wy, 14, fill, stroke);
             noteP.setColor(Ui.TEXT_2);
-            c.drawText(wxLine, x + IN + 24 + 10, wy + .36f * noteP.getTextSize(), noteP);
+            c.drawText(wxLine, x + IN + 28 + 10, wy + .36f * noteP.getTextSize(), noteP);
         }
         if (!rows.isEmpty()) {
             int lo = (int) Math.floor(Ui.clamp(pill.x, 0, rows.size() - 1)), hi = (int) Math.ceil(Ui.clamp(pill.x, 0, rows.size() - 1));

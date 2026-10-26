@@ -24,6 +24,19 @@ import java.util.Random;
  */
 public final class Screensaver extends DreamService {
     private static volatile long suppressHomeBackUntil;
+    private static Bitmap wakeFrame;  // the last frame, handed to Home so it can dissolve from it
+    private static long wakeFrameAt;
+
+    /**
+     * The frame the screensaver last showed when a key woke it, once; Home fades it out over itself. A frame
+     * Home didn't pick up straight away (the screensaver started over another app) is stale and dropped.
+     */
+    static Bitmap takeWakeFrame() {
+        Bitmap b = wakeFrame;
+        wakeFrame = null;
+        if (b != null && SystemClock.uptimeMillis() - wakeFrameAt > 1000) { b.recycle(); return null; }
+        return b;
+    }
 
     static boolean consumeHomeBack(KeyEvent event) {
         if (event.getKeyCode() != KeyEvent.KEYCODE_BACK && event.getKeyCode() != KeyEvent.KEYCODE_ESCAPE) return false;
@@ -51,13 +64,13 @@ public final class Screensaver extends DreamService {
 
     static final class SaverView extends View {
         private static final long PHOTO_MS = 5 * 60_000L, CORNER_MS = 4 * 60_000L;
-        private static final long ENTRY_FADE_MS = 450, PHOTO_FADE_MS = 2500, DRIFT_MS = 90_000L;
+        private static final long ENTRY_FADE_MS = 450, PHOTO_FADE_MS = 2500, CORNER_FADE_MS = 600, DRIFT_MS = 90_000L;
 
         private final Prefs prefs;
         private final Weather weather;
         private Bitmap current, previous;
         private String credit;
-        private long shownAt, nextAt, fadeDuration = ENTRY_FADE_MS, started = SystemClock.uptimeMillis();
+        private long shownAt, firstShownAt, nextAt, fadeDuration = ENTRY_FADE_MS, started = SystemClock.uptimeMillis();
         private boolean loading, loadAgain;
         private boolean shownFirstImage;
         private final Random random = new Random();
@@ -65,12 +78,12 @@ public final class Screensaver extends DreamService {
         private final Paint timeP, lineP, creditP;
         private final Matrix m = new Matrix();
         private LinearGradient shade;
-        private float s = 1;
+        private float s = 1, vh = Ui.H;  // vh: the view's height in design px
         private long textMinute = -1;
-        private String cachedTime = "", cachedLine = "", textDescription;
+        private String cachedTime = "", cachedLine = "", cachedTemp, textKind;
         private int textTemp = Integer.MIN_VALUE;
         private boolean textWeather;
-        private boolean attached;
+        private boolean attached, finishing;
 
         SaverView(Context c) {
             super(c);
@@ -97,8 +110,28 @@ public final class Screensaver extends DreamService {
             // Consume the complete press before finishing; otherwise Home can receive the
             // trailing Back event and immediately launch the screensaver again.
             if (keyCode == KeyEvent.KEYCODE_BACK || keyCode == KeyEvent.KEYCODE_ESCAPE) suppressHomeBack();
+            if (finishing) return true;
+            finishing = true;
+            if (!prefs.is(Prefs.MOTION, "reduced")) { wakeFrame = capture(); wakeFrameAt = SystemClock.uptimeMillis(); }
             post(() -> ((Screensaver) getContext()).finish());
             return true;
+        }
+
+        /**
+         * This frame at half size. Home is not drawn while the screensaver is up, so it can't fade to reveal it;
+         * instead Home opens under a copy of this frame and dissolves it.
+         */
+        private Bitmap capture() {
+            if (getWidth() == 0) return null;
+            try {
+                Bitmap b = Bitmap.createBitmap(getWidth() / 2, getHeight() / 2, Bitmap.Config.ARGB_8888);
+                Canvas c = new Canvas(b);
+                c.scale(.5f, .5f);
+                draw(c);
+                return b;
+            } catch (OutOfMemoryError e) {
+                return null;
+            }
         }
 
         private final Runnable weatherTick = new Runnable() {
@@ -123,7 +156,8 @@ public final class Screensaver extends DreamService {
 
         @Override protected void onSizeChanged(int w, int h, int ow, int oh) {
             s = w / Ui.W;
-            shade = new LinearGradient(0, Ui.H, 0, Ui.H * .45f, Color.argb(150, 0, 0, 0), Color.TRANSPARENT, Shader.TileMode.CLAMP);
+            vh = h / s;
+            shade = new LinearGradient(0, vh, 0, vh * .45f, Color.argb(150, 0, 0, 0), Color.TRANSPARENT, Shader.TileMode.CLAMP);
             load();
         }
 
@@ -157,6 +191,7 @@ public final class Screensaver extends DreamService {
                     current = fb;
                     credit = fcr;
                     shownAt = SystemClock.uptimeMillis();
+                    if (!shownFirstImage) firstShownAt = shownAt;
                     fadeDuration = shownFirstImage ? PHOTO_FADE_MS : ENTRY_FADE_MS;
                     shownFirstImage = true;
                     nextAt = shownAt + PHOTO_MS;
@@ -179,14 +214,15 @@ public final class Screensaver extends DreamService {
             c.save();
             c.scale(s, s);
             fill.setShader(shade);
-            c.drawRect(0, 0, Ui.W, Ui.H, fill);
+            c.drawRect(0, 0, Ui.W, vh, fill);
             fill.setShader(null);
             drawText(c, now);
             c.restore();
             boolean reduced = prefs.is(Prefs.MOTION, "reduced");
             long cornerTime = (now - started) % CORNER_MS;
-            boolean fading = fade < 1 || cornerTime < 1200 || cornerTime > CORNER_MS - 1200;
-            postInvalidateDelayed(!reduced || fading ? 33 : 1000);
+            boolean fading = fade < 1 || cornerTime < CORNER_FADE_MS || cornerTime > CORNER_MS - CORNER_FADE_MS;
+            if (fading) postInvalidateOnAnimation();  // fades run at the display's full rate; the slow drift doesn't need it
+            else postInvalidateDelayed(reduced ? 1000 : 33);
         }
 
         /** Slow zoom-and-pan, back and forth over 90 s, so the picture never sits perfectly still. */
@@ -204,36 +240,53 @@ public final class Screensaver extends DreamService {
 
         /** Clock, date and weather in one corner, moving every few minutes; the credit sits in the opposite corner. */
         private void drawText(Canvas c, long now) {
-            int corner = (int) (((now - started) / CORNER_MS) % 4);  // 0 bottom-left, 1 bottom-right, 2 top-right, 3 top-left
+            // Starts top-right, where Home's clock sits, then 3 top-left, 0 bottom-left, 1 bottom-right
+            int corner = (int) (((now - started) / CORNER_MS + 2) % 4);  // 0 bottom-left, 1 bottom-right, 2 top-right, 3 top-left
             long into = (now - started) % CORNER_MS;
-            float a = Ui.clamp(Math.min(into, CORNER_MS - into) / 1200f, 0, 1);  // fade out and in when moving
+            float a = Ui.clamp(Math.min(into, CORNER_MS - into) / (float) CORNER_FADE_MS, 0, 1);  // fade out and in when moving
+            if (now - started < CORNER_MS / 2) a = firstShownAt == 0 ? 0 : Ui.clamp((now - firstShownAt) / (float) ENTRY_FADE_MS, 0, 1);  // first corner: in with the picture
             boolean right = corner == 1 || corner == 2, top = corner >= 2;
             boolean wx = prefs.is(Prefs.WEATHER, "on") && weather.ready();
             long minute = System.currentTimeMillis() / 60_000;
-            if (minute != textMinute || wx != textWeather || weather.temp != textTemp || weather.description != textDescription) {
+            if (minute != textMinute || wx != textWeather || weather.temp != textTemp || weather.kind != textKind) {
                 String mode = prefs.get(Prefs.CLOCK);
                 boolean h24 = "24".equals(mode) || ("system".equals(mode) && DateFormat.is24HourFormat(getContext()));
                 Calendar cal = Calendar.getInstance();
                 cachedTime = DateFormat.format(h24 ? "H:mm" : "h:mm", cal).toString();
                 cachedLine = DateFormat.format("EEEE, MMMM d", cal).toString();
-                if (wx) cachedLine += "   ·   " + weather.temp + "°  " + weather.description;
-                textMinute = minute; textTemp = weather.temp; textDescription = weather.description; textWeather = wx;
+                if (wx) cachedLine += "   ·   ";
+                cachedTemp = wx ? weather.temp + "°" : null;
+                textMinute = minute; textTemp = weather.temp; textKind = weather.kind; textWeather = wx;
             }
 
-            float x = right ? Ui.W - 120 : 120, timeBase = top ? 96 + 150 * .73f : Ui.H - 104 - 48;
+            float x = right ? Ui.W - 120 : 120, timeBase = top ? 96 + 150 * .73f : vh - 104 - 48;
             Paint.Align al = right ? Paint.Align.RIGHT : Paint.Align.LEFT;
             timeP.setTextAlign(al);
-            lineP.setTextAlign(al);
             timeP.setAlpha(Math.round(242 * a));
             lineP.setAlpha(Math.round(210 * a));
             c.drawText(cachedTime, x, timeBase, timeP);
-            c.drawText(cachedLine, x, timeBase + 56, lineP);
+            drawLine(c, x, timeBase + 56, right, a);
 
             if (credit != null) {
                 creditP.setTextAlign(right ? Paint.Align.LEFT : Paint.Align.RIGHT);
                 creditP.setAlpha(Math.round(Color.alpha(Ui.TEXT_3) * a));
-                c.drawText(credit, right ? Ui.SAFE_X : Ui.W - Ui.SAFE_X, top ? Ui.H - 40 : 64, creditP);
+                c.drawText(credit, right ? Ui.SAFE_X : Ui.W - Ui.SAFE_X, top ? vh - 40 : 64, creditP);
             }
+        }
+
+        /** The date, then the weather as its condition glyph and the temperature, like Home's status bar. */
+        private void drawLine(Canvas c, float x, float base, boolean right, float a) {
+            lineP.setTextAlign(Paint.Align.LEFT);
+            float iconR = 17, gap = 10, dateW = lineP.measureText(cachedLine);
+            float w = dateW + (cachedTemp == null ? 0 : iconR * 2 + gap + lineP.measureText(cachedTemp));
+            float l = right ? x - w : x;
+            c.drawText(cachedLine, l, base, lineP);
+            if (cachedTemp == null) return;
+            float cx = l + dateW + iconR, cy = base - .36f * lineP.getTextSize();
+            int layer = c.saveLayerAlpha(cx - iconR * 1.5f, cy - iconR * 1.5f, cx + iconR * 1.5f, cy + iconR * 1.5f, Math.round(235 * a));
+            Glyphs.weather(c, weather.kind, cx, cy, iconR, fill, stroke);
+            c.restoreToCount(layer);
+            c.drawText(cachedTemp, cx + iconR + gap, base, lineP);
         }
     }
 }

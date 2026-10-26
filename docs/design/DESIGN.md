@@ -39,14 +39,14 @@ a browser. The arrow keys act as the D-pad, Enter as OK (hold it for the tile me
 | Element | Spec |
 |---|---|
 | Safe area | 96 px left/right, 64 px top/bottom (TV overscan); content aligns to x = 185 px |
-| Clock | Top-right, 40 px, Inter Medium, −2% tracking, tabular figures, 95% white. Optional date below, 21 px, 62% white |
+| Clock | Top-right, its right edge (and the date's) on the dock's outer right edge, 40 px, Inter Medium, −2% tracking, tabular figures, 95% white. Optional date below, 21 px, 62% white |
 | Weather | Left of the clock, separated by a 1.5 px hairline: a color glyph (34 px) and the temperature, 30 px Medium, 62% white |
-| Top Shelf | Heading at y = 262 px: **Top Picks for You**, 25 px SemiBold, then “across your apps” in 62% white. First card aligns to the floating dock's outer edge. Cards 376×211 px, radius 20, gap 28, with the episode/time line |
-| Dock | Glass (see Materials), centered, bottom edge at 81% of screen height. Padding 22 px; radius 42 px = tile radius + padding, so the curves are concentric |
-| Tiles | 16:9, radius 20 px. Medium 288×162 px (default, five across), Small 232×130 (six), Large 376×211 (four) |
-| Focus | A close-fitting 2 px softly lit focus rim with a faint halo on apps and recommendation cards, plus scale 1.09 (cards 1.07) over 240 ms, deep soft shadow and a low-contrast, static top-light sheen. Focused tiles and cards add a softly eased 0.4% double-beat pulse every 3.4 s; it starts only after D-pad navigation. Home restores stable focus by app/content identity at rest, without a zoom replay or entry pulse. Focus springs are critically damped. Reduced motion and open menus pause it. The dock's specular highlight slides to sit above the focused tile |
-| Label | Focused tile only (default). 25 px SemiBold, 22 px under the dock |
-| Legibility | A dark vignette behind the clock and along the bottom, plus a soft band behind the shelf that strengthens on bright daytime scenes. During the All Apps scroll, a pre-blurred gradient sits above the moving dock and below the clock/date |
+| Top Shelf | Pinned to the top: heading at y = 190 px, just under the clock and date (it lifts only on screens too short to fit it above the dock): **Top Picks for You**, 25 px SemiBold, then “across your apps” in 62% white. Cards span the dock edge to edge, so the first card and the heading align with the dock's outer edge: Standard 4 across (400×225 px), Compact 5, Large 3; radius 22, gap 42, with the episode/time line set flush with the card's left edge |
+| Dock | Glass (see Materials), full width between the 96 px overscan margins, bottom edge 128 px above the screen's real bottom edge (room for the focused app's name and the All Apps hint and credit row). Heights follow the TV's actual screen, not a fixed 1080, so the dock stays at the bottom on any aspect ratio; in All Apps it rises to 86 px from the top. Padding 40 px, tile gap 42 px, so five tiles fill it exactly. Tiles and cards use Apple's 60% corner smoothing; the dock (radius 62 = tile radius + padding) and the focus ring take whatever smoothing makes their corners begin exactly a padding further along the edge, so every outline runs parallel to the one inside it. Everything shares the dock's outer edges (96 and 1824 px): the shelf heading and cards, the All Apps heading and the All Apps hint start on the left one; the clock, date, photo credit and last card end on the right one, where the focused clock pill also ends. Top Shelf cards are clipped to the dock's width |
+| Tiles | 16:9, radius 22 px. Medium 296×166.5 px (default, five across), Small 232×130 (six), Large 376×211 (four) |
+| Focus | A crisp white 3 px focus ring, with a 2.5 px gap and no glow or dark edge on apps and recommendation cards, plus scale 1.09 (cards 1.07) over 240 ms, deep soft shadow and a low-contrast, static top-light sheen. Focused tiles and cards add a softly eased 0.4% double-beat pulse every 3.4 s; it starts only after D-pad navigation. Home restores stable focus by app/content identity at rest, without a zoom replay or entry pulse. Focus springs are critically damped. Reduced motion and open menus pause it. The dock's specular highlight slides to sit above the focused tile |
+| Label | Focused tile only (default). 25 px SemiBold, 22 px under the dock. The same Labels setting applies to the All Apps grid |
+| Legibility | A dark vignette behind the clock and along the bottom, plus a soft band behind the shelf that strengthens on bright daytime scenes. During the All Apps scroll, the clock, weather and date lift up and fade out (fade only with Reduced motion); nothing is laid over the dock |
 
 ## Screens
 
@@ -58,21 +58,26 @@ a browser. The arrow keys act as the D-pad, Enter as OK (hold it for the tile me
 3. **Cinematic.** Up from the dock moves focus into the shelf. The focused item's artwork fills the screen behind a
    dark gradient, with the app name, the title, year · rating · genre, a two-line synopsis and *Resume*/*Play*.
    The dock slides away and the cards settle at the bottom. Back or Down returns home.
-4. **All Apps.** Down from the dock: the shelf fades, the page scrolls up, and the dock passes behind a blurred,
-   fading glass gradient. The clock and date remain crisp above it. The background blurs (64 px), saturates and dims
+4. **All Apps.** Down from the dock: the shelf fades, the page scrolls up, and the dock rises to the top with
+   nothing laid over it while the clock and weather lift away. The background blurs (64 px), saturates and dims
    to half, and a five-column grid aligned with the dock's tiles appears. Back returns to the dock; Back again
    starts the screensaver.
 5. **Tile menu.** Long-press OK on a tile: *Move* · *Add to/Remove from Top Row* · *Show in Top Shelf* · *Hide* ·
-   *App info* · *Home Screen Settings*. *Move* makes the tile wiggle; Left/Right moves it, OK drops it.
+   *App info* · *Home Screen Settings*. *Move* makes the tile wiggle; Left/Right moves it, OK drops it. In All Apps,
+   Up/Down also move it a row and the tiles between shift along; the grid stays A–Z until first rearranged.
 6. **Status bar and settings.** Up from the shelf (or the dock) focuses the weather and clock: they sit in a quiet
    glass bar and a gear chip slides in at its end. The chip is the focused control (near-white, lifted, dark gear).
    OK opens Settings as a compact dropdown 12 px below the bar, right edges aligned, as tall as its content, with
-   today's weather (condition, high, low) under the title. Changes preview live. There is no settings tile; the tile
-   menu and the remote's Menu key open the same dropdown.
+   today's weather (a condition glyph, the temperature, high and low) under the title. Changes preview live. There is no settings tile; the tile
+   menu and the remote's Menu key open the same dropdown. It grows out of the gear chip from 90%, solid within the
+   first third of the move, and settles with a barely visible overshoot; closing, it shrinks only slightly and fades
+   quickly, with no bounce.
 7. **Screensaver.** The same scene, full screen, drifting very slowly (a 90 s zoom-and-pan, back and forth), with
-   a large clock (150 px SemiBold), the date and the weather at the bottom left. The text block moves to a new spot
-   every few minutes so nothing burns into OLED panels. It fades in over 450 ms; new photos crossfade over 2.5 s.
-   Any key wakes the TV straight back to Home.
+   a large clock (150 px SemiBold), the date and the weather at the top right, where Home's clock sits. The text
+   block moves to the next corner every four minutes so nothing burns into OLED panels, fading out and in over
+   600 ms. It fades in with the first picture over 450 ms; new photos crossfade over 2.5 s.
+   Any key wakes the TV straight back to Home, which crossfades in under the screensaver's last frame over 400 ms
+   (instant with Reduced motion). Home takes input at once; the dissolving frame is only an overlay.
 
 ## Content: where the shelf comes from
 
@@ -211,9 +216,10 @@ Selected rows in menus are near-white pills (94%) with dark text, as on a clean 
 | | Motion | Full / Reduced (fades only; focus shown with an outline) | **Full** |
 | Top Shelf | Top Shelf | Top Picks for You / Continue Watching / Off | **Top Picks for You** |
 | | Cinematic artwork | On / Off (Off keeps the scene behind the hero text) | **On** |
+| | Card size | Standard (376×211) / Large (520×293, shelf lifts to clear the dock) / Compact (300×169) | **Standard** |
+| | Card text | Title & details / Title only / None | **Title & details** |
 | | Apps in Top Shelf | Per-app toggles | all |
 | Top Row | Tile size | Small / Medium / Large | **Medium** |
-| | Labels | On focus / Always / Never | **On focus** |
 | | Apps | Edit order (opens Move) | well-known video apps first, then A–Z, five apps |
 | Clock & Weather | Clock | System (12/24 h) / 12-hour / 24-hour / Off | **System** |
 | | Show date | On / Off | **Off** |
@@ -221,7 +227,8 @@ Selected rows in menus are near-white pills (94%) with dark text, as on a clean 
 | | Location | City/postal-code search / Time zone (approx.) | **Time zone (approx.)** |
 | | Units | Auto / °F / °C | **Auto** |
 | Screensaver | Screensaver | NASA photos / Landscape / Black | **NASA photos** |
-| Apps | Hidden apps | List with toggles | none |
+| Apps | Labels | On focus / Always / Never (dock and All Apps) | **On focus** |
+| | Hidden apps | List with toggles | none |
 | About | Version and creator credit (Yehuda Bortz), how to switch back to the original home screen | | |
 
 ## Technical shape (keeps it light)
@@ -277,6 +284,7 @@ an interactive design reference; planned cinematic mode is not shown as a shippe
 | ![All Apps](screens/all-apps.jpg) All Apps | ![Screensaver](screens/screensaver.jpg) Screensaver with a sample NASA Earth photo |
 | ![Forest by day](screens/forest-day.jpg) Forest by day | ![Dunes at dawn](screens/dunes-dawn.jpg) Dunes at dawn, Up Next |
 | ![Coast by day](screens/coast-day.jpg) Coast by day | ![Quiet](screens/quiet.jpg) Quiet: Black, Top Shelf off |
+| ![Large cards](screens/large-cards.jpg) Top Shelf with Large cards | ![Compact cards](screens/compact-cards.jpg) Compact cards, title only |
 
 ![About settings](screens/about.jpg) About: creator credit and a wrapped privacy note inside the panel.
 

@@ -47,12 +47,12 @@ final class AppStore {
             "com.disney.disneyplus", "com.hulu.livingroomplus", "com.wbd.stream", "com.plexapp.android", "com.peacocktv.peacockandroid", "com.cbs.ott",
             "tv.pluto.android", "com.spotify.tv.android");
     private static final int DEFAULT_ROW = 5;
-    static final float TILE_W = 288, TILE_H = 162;
+    static final float TILE_W = 296, TILE_H = TILE_W * 9 / 16;  // five fill the dock with 42 px gaps
 
     final List<App> all = new ArrayList<>();     // visible apps
     final List<App> hidden = new ArrayList<>();  // hidden from Lumen (still installed)
     final List<App> row = new ArrayList<>();
-    final List<App> rest = new ArrayList<>();    // All Apps: everything not in the row
+    final List<App> rest = new ArrayList<>();    // All Apps: everything not in the row, A–Z until rearranged
     private final SharedPreferences prefs;
     private final float scale;
 
@@ -101,7 +101,13 @@ final class AppStore {
             App a = find(p);
             if (a != null && inRow.add(p)) row.add(a);
         }
-        for (App a : all) if (!inRow.contains(a.pkg)) rest.add(a);
+        // a saved All Apps order keeps its apps in place; apps it doesn't know yet (new installs) follow, A–Z
+        String savedRest = prefs.getString("rest", null);
+        if (savedRest != null) for (String p : savedRest.split(",")) {
+            App a = find(p);
+            if (a != null && !inRow.contains(p) && !rest.contains(a)) rest.add(a);
+        }
+        for (App a : all) if (!inRow.contains(a.pkg) && !rest.contains(a)) rest.add(a);
     }
 
     App find(String pkg) {
@@ -115,18 +121,40 @@ final class AppStore {
         prefs.edit().putString("row", sb.toString()).apply();
     }
 
+    /** Saves the All Apps order, once the user has rearranged it; until then it stays A–Z. */
+    private void saveRest() {
+        if (prefs.contains("rest")) writeRest();
+    }
+
+    private void writeRest() {
+        StringBuilder sb = new StringBuilder();
+        for (App a : rest) sb.append(a.pkg).append(',');
+        prefs.edit().putString("rest", sb.toString()).apply();
+    }
+
     void addToRow(App a) {
         if (row.contains(a)) return;
         row.add(a);
         rest.remove(a);
         saveRow();
+        saveRest();
     }
 
     void removeFromRow(App a) {
         if (!row.remove(a)) return;
-        rest.add(a);
-        Collections.sort(rest, (x, y) -> x.label.compareToIgnoreCase(y.label));
+        if (prefs.contains("rest")) rest.add(0, a);  // a rearranged grid: first, where it is easy to find and move
+        else {
+            rest.add(a);
+            Collections.sort(rest, (x, y) -> x.label.compareToIgnoreCase(y.label));
+        }
         saveRow();
+        saveRest();
+    }
+
+    /** Moves an All Apps tile from i to j, shifting the tiles between; from then on the order is saved. */
+    void moveInRest(int i, int j) {
+        rest.add(j, rest.remove(i));
+        writeRest();
     }
 
     void swapInRow(int i, int j) {

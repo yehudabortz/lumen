@@ -30,7 +30,10 @@ jobs:
           distribution: temurin
           java-version: '21'
       - name: Install Android tools
-        run: sdkmanager 'build-tools;35.0.0' 'platforms;android-34'
+        run: |
+          SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager -print -quit)
+          test -n "$SDKMANAGER"
+          "$SDKMANAGER" 'build-tools;35.0.0' 'platforms;android-34'
       - name: Build from a clean checkout
         run: ./build.sh
       - name: Scenic selection regressions
