@@ -63,7 +63,8 @@ a browser. The arrow keys act as the D-pad, Enter as OK (hold it for the tile me
    to half, and a five-column grid aligned with the dock's tiles appears. Back returns to the dock; Back again
    starts the screensaver.
 5. **Tile menu.** Long-press OK on a tile: *Move* · *Add to/Remove from Top Row* · *Show in Top Shelf* · *Hide* ·
-   *App info* · *Home Screen Settings*. *Move* makes the tile wiggle; Left/Right moves it, OK drops it.
+   *App info* · *Home Screen Settings*. *Move* makes the tile wiggle; Left/Right moves it, OK drops it. In All Apps,
+   Up/Down also move it a row and the tiles between shift along; the grid stays A–Z until first rearranged.
 6. **Status bar and settings.** Up from the shelf (or the dock) focuses the weather and clock: they sit in a quiet
    glass bar and a gear chip slides in at its end. The chip is the focused control (near-white, lifted, dark gear).
    OK opens Settings as a compact dropdown 12 px below the bar, right edges aligned, as tall as its content, with

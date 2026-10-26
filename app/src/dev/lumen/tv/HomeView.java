@@ -387,7 +387,10 @@ final class HomeView extends View implements Overlays.Host {
     private void move(int dx, int dy) {
         if (apps == null) return;
         List<AppStore.App> row = apps.row, rest = apps.rest;
-        if (moving) {
+        if (moving && area == Area.GRID) {  // ◀ ▶ one place, ▲ ▼ one row, the tiles between shift along
+            int j = Math.max(0, Math.min(rest.size() - 1, gridI + dx + dy * 5));
+            if (j != gridI) { apps.moveInRest(gridI, j); gridI = j; }
+        } else if (moving) {
             int j = rowI + dx;
             if (dx != 0 && j >= 0 && j < row.size()) { apps.swapInRow(rowI, j); rowI = j; }
         } else if (area == Area.ROW) {
@@ -498,10 +501,10 @@ final class HomeView extends View implements Overlays.Host {
     }
 
     @Override public void moveTile(AppStore.App a) {
-        int i = apps.row.indexOf(a);
-        if (i < 0) return;
-        area = Area.ROW;
-        rowI = i;
+        int i = apps.row.indexOf(a), g = apps.rest.indexOf(a);
+        if (i >= 0) { area = Area.ROW; rowI = i; }
+        else if (g >= 0) { area = Area.GRID; gridI = g; }
+        else return;
         moving = true;
         invalidate();
     }
@@ -977,7 +980,7 @@ final class HomeView extends View implements Overlays.Host {
                 float x = LEFT + (i % 5) * (TILE_W + GAP), y = gridTop + (i / 5) * GRID_STEP_Y - gridScroll.x;
                 if (y > end || y + TILE_H < bottom) continue;
                 AppStore.App a = rest.get(i);
-                drawTile(c, a, x, y, false, alpha);
+                drawTile(c, a, x, y, moving && i == focusedIdx, alpha);
                 float f = Ui.clamp(focusOf(a), 0, 1);
                 if (f > 0.01f) {
                     nameP.setAlpha(Math.round(255 * f * alpha));
@@ -1100,7 +1103,7 @@ final class HomeView extends View implements Overlays.Host {
     }
 
     private void drawToast(Canvas c, long now) {
-        String msg = moving ? "◀ ▶  Move      OK  Done" : toast;
+        String msg = moving ? (area == Area.GRID ? "◀ ▶ ▲ ▼  Move      OK  Done" : "◀ ▶  Move      OK  Done") : toast;
         if (msg == null) return;
         float a = moving ? 1 : Ui.clamp((toastUntil - now) / 300f, 0, 1);
         if (a <= 0) { toast = null; return; }

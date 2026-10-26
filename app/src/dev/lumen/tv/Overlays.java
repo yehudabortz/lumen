@@ -151,7 +151,7 @@ final class Overlays {
         items.clear();
         final AppStore.App a = target;
         Prefs p = host.prefs();
-        if (targetInRow) items.add(new Item("Move", "move", null, () -> { close(); host.moveTile(a); }));
+        items.add(new Item("Move", "move", null, () -> { close(); host.moveTile(a); }));
         items.add(new Item(targetInRow ? "Remove from Top Row" : "Add to Top Row", targetInRow ? "remove" : "add", null, () -> { close(); host.toggleRow(a); }));
         items.add(new Item("Show in Top Shelf", "shelf", p.contains(Prefs.SHELF_OFF, a.pkg) ? "Off" : "On", () -> {
             p.toggle(Prefs.SHELF_OFF, a.pkg);
