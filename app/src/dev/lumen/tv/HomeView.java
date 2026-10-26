@@ -802,10 +802,8 @@ final class HomeView extends View implements Overlays.Host {
         c.drawText(suffix, left + headP.measureText(shelf.heading), shelfTop + 25, headAppP);
         // the focused card draws last, so its shadow lies over its neighbours
         int focusedIdx = area == Area.SHELF ? cardI : -1;
-        c.save();
-        // cards end with the dock, not at the screen edge: ones past it fade out instead of being cut, so no shadow
-        // is sliced by the clip, which only keeps a card sliding in out of the overscan margin
-        c.clipRect(EDGE_L - Ui.SAFE_X + 16, -Ui.H, EDGE_R + Ui.SAFE_X - 16, 2 * Ui.H);
+        // cards end with the dock, not at the screen edge: ones past it fade out as they slide on to the real edge,
+        // never cut by a clip, so nothing stops short of the screen or slices a shadow
         for (int i = 0; i < shelf.items.size(); i++) {
             if (i == focusedIdx) continue;
             float x = left + i * (cardW + GAP) - cardScroll.x;
@@ -816,13 +814,13 @@ final class HomeView extends View implements Overlays.Host {
             float x = left + focusedIdx * (cardW + GAP) - cardScroll.x;
             drawCard(c, shelf.items.get(focusedIdx), x, cardTop, Math.round(a * cardVisibility(x)));
         }
-        c.restore();
     }
 
     /** 1 for a card inside the dock's edges, falling to 0 as it slides one card's step past either edge. */
     private float cardVisibility(float x) {
         float over = Math.max(0, Math.max(EDGE_L - x, x + cardW - EDGE_R));
-        return Math.max(0, 1 - over / (cardW + GAP));
+        float t = Math.max(0, 1 - over / (cardW + GAP));
+        return t * t * (3 - 2 * t);  // smoothstep: eases in and out at both ends of the slide
     }
 
     /** Card geometry for the Card size setting. Large cards lift the shelf so their text clears the dock. */
