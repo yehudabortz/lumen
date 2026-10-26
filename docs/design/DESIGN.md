@@ -279,6 +279,7 @@ an interactive design reference; planned cinematic mode is not shown as a shippe
 | ![All Apps](screens/all-apps.jpg) All Apps | ![Screensaver](screens/screensaver.jpg) Screensaver with a sample NASA Earth photo |
 | ![Forest by day](screens/forest-day.jpg) Forest by day | ![Dunes at dawn](screens/dunes-dawn.jpg) Dunes at dawn, Up Next |
 | ![Coast by day](screens/coast-day.jpg) Coast by day | ![Quiet](screens/quiet.jpg) Quiet: Black, Top Shelf off |
+| ![Large cards](screens/large-cards.jpg) Top Shelf with Large cards | ![Compact cards](screens/compact-cards.jpg) Compact cards, title only |
 
 ![About settings](screens/about.jpg) About: creator credit and a wrapped privacy note inside the panel.
 
