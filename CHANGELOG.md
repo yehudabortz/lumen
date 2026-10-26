@@ -9,6 +9,7 @@
 - Settled focus on Home return and wrapped settings notes.
 - Native emulator screenshot fixtures using public sample content.
 - MIT licensing, source notices, privacy/contribution/security documentation and CI checks.
+- Top Shelf view options: Standard, Large or Compact cards, and title-and-details, title-only or no card text.
 - Weather attribution links in Settings; removed the unused Unsplash integration and API-key embedding.
 
 Known limitations: cinematic mode, selectable tile sizes and bundled Inter remain planned. Device vendors

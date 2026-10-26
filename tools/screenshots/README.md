@@ -32,7 +32,7 @@ adb -s emulator-5554 shell settings put secure user_setup_complete 1
 tools/screenshots/capture.sh emulator-5554
 ```
 
-The script refuses physical TVs, checks restored focus, and captures fourteen native PNGs in `out/capture/screenshots/`. Optional second argument: another output directory. SDK paths follow `ANDROID_HOME`/`JAVA_HOME`; `ADB` and `LUMEN_CAPTURE_ASSETS` can override the tool and artwork cache.
+The script refuses physical TVs, checks restored focus, and captures sixteen native PNGs in `out/capture/screenshots/`. Optional second argument: another output directory. SDK paths follow `ANDROID_HOME`/`JAVA_HOME`; `ADB` and `LUMEN_CAPTURE_ASSETS` can override the tool and artwork cache.
 
 The artwork manifest pins public source URLs and SHA-256 hashes. YouTube uses its bundled TV banner; other sample banners use publishers' icons. Recommendations and progress are fictional. NASA fixtures seed the normal photo cache; production decoding, cropping, shading and motion still apply. Home uses a sample clock/weather report. The saver captures its production view, not DreamService lifecycle behavior. These are not app subscriptions or performance benchmarks.
 

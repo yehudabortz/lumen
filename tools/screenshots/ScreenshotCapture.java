@@ -92,6 +92,9 @@ public final class ScreenshotCapture extends Instrumentation {
             preference(Prefs.SHELF, "rich");
             key(KeyEvent.KEYCODE_DPAD_UP);
             capture("top-picks");
+            preference(Prefs.CARD_SIZE, "large"); capture("large-cards");
+            preference(Prefs.CARD_SIZE, "compact"); preference(Prefs.CARD_TEXT, "title"); capture("compact-cards");
+            preference(Prefs.CARD_SIZE, "standard"); preference(Prefs.CARD_TEXT, "details");
             runOnMainSync(view::reset);
             key(KeyEvent.KEYCODE_DPAD_DOWN);
             capture("all-apps");
@@ -116,7 +119,7 @@ public final class ScreenshotCapture extends Instrumentation {
             SystemClock.sleep(2000);
             captureScreen("screensaver");
             result.putString("output", destination.getAbsolutePath());
-            result.putString("stream", "Captured 14 native Lumen screenshots with public sample content.\n");
+            result.putString("stream", "Captured 16 native Lumen screenshots with public sample content.\n");
             finish(Activity.RESULT_OK, result);
         } catch (Throwable error) {
             result.putString("stream", android.util.Log.getStackTraceString(error));
